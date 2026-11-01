@@ -1,0 +1,11 @@
+node_modules/
+dist/
+dist-server/
+.local-server/
+data/
+coverage/
+test-results/
+playwright-report/
+.env
+*.log
+WRITE_ACCESS_CHECK.md

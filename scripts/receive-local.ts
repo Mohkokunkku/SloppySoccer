@@ -1,0 +1,19 @@
+import { resolve,join } from 'node:path';
+import { mkdir,writeFile } from 'node:fs/promises';
+import { execFileSync } from 'node:child_process';
+import { spawn } from 'node:child_process';
+import { run,cleanEnv } from './process.js';
+const [bareArg,commit,rootArg]=process.argv.slice(2);
+if(!bareArg||!rootArg||!/^[a-f0-9]{40,64}$/.test(commit??'')) throw new Error('Expected bare repo, full commit hash, deployment root');
+const bare=resolve(bareArg); const root=resolve(rootArg); const build=join(root,'builds',`${commit.slice(0,12)}-${Date.now()}`);
+await mkdir(build,{recursive:true});
+const archive=execFileSync('git',['--git-dir',bare,'archive','--format=tar',commit],{env:cleanEnv(),maxBuffer:64*1024*1024});
+const archivePath=join(build,'source.tar'); await writeFile(archivePath,archive);
+await run('tar',['-xf',archivePath,'-C',build],build);
+// npm_execpath is not inherited by a git hook. Resolve npm beside node (Windows) or use npm on PATH.
+const npmCommand=process.platform==='win32'?'npm.cmd':'npm';
+const command=process.platform==='win32'?(process.env.ComSpec??'cmd.exe'):npmCommand;
+const npmArgs=process.platform==='win32'?['/d','/s','/c',npmCommand]:[];
+await run(command,[...npmArgs,'ci','--ignore-scripts','--no-fund','--no-audit'],build);
+await run(command,[...npmArgs,'run','deploy:local'],build,{DEPLOY_ROOT:root,RELEASE_ID:`git-${commit.slice(0,12)}-${Date.now()}`});
+console.log(`LOCAL CD SUCCESS ${commit}`);

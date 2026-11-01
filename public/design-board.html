@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Sloppy Soccer — toy workshop art board</title>
+<style>
+:root{--ink:#262925;--paper:#fff8e9;--line:#d7cbb6;--oak:#bd9165;--green:#377b55;--green-dark:#286044;--ivory:#fff3d6;--coral:#ef6855;--cobalt:#356bce;--keeper:#282d32;--skin:#dba978;--hair:#392c27;--yellow:#ffe183}
+*{box-sizing:border-box}body{margin:0;background:#b89168;color:var(--ink);font:16px/1.5 "Trebuchet MS",Arial,sans-serif;background-image:repeating-linear-gradient(2deg,transparent 0 25px,#956b451a 26px 27px,transparent 28px 61px)}
+.sheet{max-width:1480px;margin:36px auto;background:var(--paper);padding:42px 48px 30px;box-shadow:0 16px 32px #543c3529;position:relative}.sheet:before,.sheet:after{content:"";position:absolute;width:100px;height:26px;top:-11px;background:#e2d6b3aa;transform:rotate(-4deg);left:65px}.sheet:after{left:auto;right:60px;transform:rotate(6deg)}
+header{display:flex;align-items:flex-end;justify-content:space-between;gap:24px;padding-bottom:24px;border-bottom:2px solid var(--ink)}h1{font-family:"Arial Black",Impact,sans-serif;font-size:clamp(52px,6.4vw,94px);line-height:.87;letter-spacing:-.075em;margin:0;transform:rotate(-2deg);max-width:800px}h1 span{display:block;color:var(--coral)}.tag{max-width:240px;font-size:15px;line-height:1.45}.tag strong{font-size:19px;display:block}.tag p{margin:7px 0 0}.topline{display:flex;gap:20px;justify-content:space-between;margin:18px 0 0;font-size:13px;color:#625e51}.main{display:grid;grid-template-columns:minmax(0,2.1fr) minmax(290px,1fr);gap:28px}.scene{margin:0;position:relative;align-self:center}.scene svg{display:block;width:100%;height:auto;overflow:visible}.scene figcaption{font-size:14px;max-width:660px;margin:0 0 12px 9px}.study{border-left:1px solid var(--line);padding-left:26px;margin-top:24px}.study h2,.footer h2{font-size:22px;letter-spacing:-.04em;margin:0 0 7px}.study p{font-size:14px;margin:5px 0}.study svg{width:100%;height:auto;display:block}.note{font-size:13px;color:#625e51}.footer{border-top:2px solid var(--ink);padding-top:23px;margin-top:12px;display:grid;grid-template-columns:1.1fr 1.15fr 1fr;gap:26px}.footer section+section{border-left:1px solid var(--line);padding-left:26px}.swatches{display:flex;height:66px;margin:15px 0 10px}.swatch{flex:1;position:relative}.swatch:after{content:attr(data-name);position:absolute;bottom:-24px;left:0;font-size:11px}.palette-note{margin-top:32px;font-size:13px}.hud{display:flex;align-items:stretch;justify-content:center;margin:18px 0 13px;filter:drop-shadow(0 4px 0 #27292522);font-weight:bold;font-variant-numeric:tabular-nums}.hud .team{padding:12px 13px;color:var(--ink);font-size:12px;background:var(--coral);display:flex;align-items:center;gap:12px}.hud .team.away{background:var(--cobalt);color:white}.hud b{font-size:28px;line-height:1}.hud .clock{background:var(--ink);color:var(--paper);font-size:19px;display:grid;place-items:center;padding:10px 15px}.hud-note{font-size:13px}.motion{width:100%;display:block}.footer p{font-size:13px}footer{margin-top:24px;padding-top:12px;border-top:1px solid var(--line);display:flex;justify-content:space-between;gap:20px;font-size:12px;color:#625e51}.print{font:inherit;color:var(--ink);border:1px solid #8a806e;background:transparent;padding:7px 12px;cursor:pointer;min-height:44px}.print:hover{background:#e8dcc7}.print:focus-visible{outline:3px solid var(--cobalt);outline-offset:4px}.svg-label{font:16px "Trebuchet MS",Arial,sans-serif;fill:var(--ink)}.small-label{font:13px "Trebuchet MS",Arial,sans-serif;fill:#625e51}.hairline{fill:none;stroke:#8b826e;stroke-width:1.2}.callout{fill:var(--paper);stroke:#8b826e;stroke-width:1.2}.kit{fill:var(--kit,var(--coral))}
+@media(max-width:1000px){.sheet{margin:22px;padding:32px}.main{grid-template-columns:minmax(0,1.7fr) minmax(250px,1fr)}.footer{grid-template-columns:1fr 1fr}.footer section:last-child{grid-column:1/-1;border-left:0;border-top:1px solid var(--line);padding:18px 0 0}.motion{max-width:360px}}
+@media(max-width:700px){.sheet{margin:18px 10px;padding:25px 20px}header{align-items:flex-start;flex-direction:column}.tag{max-width:none}.tag p{max-width:38ch}.topline span:last-child{display:none}.main{display:block}.study{border-left:0;border-top:1px solid var(--line);padding:20px 0 0}.study svg{max-width:350px;margin:auto}.footer{grid-template-columns:1fr}.footer section+section{border-left:0;border-top:1px solid var(--line);padding:18px 0 0}.footer section:last-child{grid-column:auto}footer{align-items:flex-start}.scene figcaption{margin-top:12px}.hud{justify-content:flex-start}}
+@media print{body{background:white}.sheet{margin:0;padding:20px;box-shadow:none;max-width:none}.sheet:before,.sheet:after,.print{display:none}.main{grid-template-columns:2fr 1fr}.footer{grid-template-columns:1fr 1fr 1fr}.footer section:last-child{grid-column:auto;border-top:0;border-left:1px solid var(--line);padding:0 0 0 26px}*{print-color-adjust:exact}}
+</style>
+</head>
+<body>
+<svg xmlns="http://www.w3.org/2000/svg" width="0" height="0" aria-hidden="true" style="position:absolute;overflow:hidden"><defs>
+<linearGradient id="plastic" x1="0" x2="1" y1="0" y2=".3"><stop offset="0" stop-color="white" stop-opacity=".22"/><stop offset=".4" stop-color="white" stop-opacity="0"/><stop offset="1" stop-color="#151515" stop-opacity=".24"/></linearGradient>
+<linearGradient id="skinlight"><stop stop-color="#f0c398"/><stop offset="1" stop-color="#c18b61"/></linearGradient>
+<linearGradient id="bootlight"><stop stop-color="#171d22"/><stop offset=".5" stop-color="#3c4143"/><stop offset="1" stop-color="#13191d"/></linearGradient>
+<pattern id="wood" width="180" height="34" patternUnits="userSpaceOnUse"><rect width="180" height="34" fill="#c69e74"/><path d="M0 7Q45 0 90 7T180 8M0 18Q70 8 120 18T200 17M0 29Q60 22 180 29" stroke="#a47c53" stroke-width="1" fill="none" opacity=".5"/></pattern>
+<pattern id="grass" width="130" height="400" patternUnits="userSpaceOnUse"><rect width="130" height="400" fill="#377b55"/><rect width="65" height="400" fill="#3f835d"/></pattern>
+<filter id="shadow" x="-30%" y="-40%" width="170%" height="190%"><feGaussianBlur stdDeviation="8"/></filter>
+<g id="toy">
+<ellipse cx="9" cy="0" rx="37" ry="9" fill="#182a2133"/>
+<path d="M-18-48L-20-22M17-48L21-22" stroke="url(#skinlight)" stroke-width="13" stroke-linecap="round"/>
+<path d="M-21-25L-22-7-29-4M21-25L23-7 30-3" stroke="url(#bootlight)" stroke-width="16" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M-25-64L-24-43Q-16-37-6-43L0-57 7-43Q15-37 25-43L24-64Z" fill="#282d32"/>
+<path d="M-23-99L-43-90-60-98M23-99L44-89 61-96" class="kit" fill="none" stroke="var(--kit,#ef6855)" stroke-width="16" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M-61-98L-65-100M61-96L66-98" stroke="url(#skinlight)" stroke-width="11" stroke-linecap="round"/>
+<path d="M-19-107Q0-112 20-107L27-92 23-63Q0-57-24-63L-27-92Z" class="kit"/>
+<path d="M-19-107Q0-112 20-107L27-92 23-63Q0-57-24-63L-27-92Z" fill="url(#plastic)"/>
+<path d="M-18-101L-20-70M20-99L22-68" stroke="#fff" opacity=".17" stroke-width="2"/>
+<path d="M-7-113L-7-105Q0-100 7-105L7-114" fill="url(#skinlight)"/>
+<path d="M-13-131Q-15-147 0-150 17-149 15-130L12-117Q0-106-11-118Z" fill="url(#skinlight)"/>
+<path d="M-14-131Q-20-150-2-154 17-155 17-137L12-128 10-139Q-1-134-12-140Z" fill="#392c27"/>
+<path d="M-9-146Q-5-151-2-151M-4-143Q1-150 5-149M2-142Q7-148 10-146" fill="none" stroke="#756052" stroke-width="2" stroke-linecap="round"/>
+<path d="M-9-128L-5-127M5-127L9-128" stroke="#392c27" stroke-width="2" stroke-linecap="round"/>
+<path d="M0-125L-1-120 2-120M-4-116Q0-114 4-116" fill="none" stroke="#ad7854" stroke-width="1.4"/>
+<path d="M-4-104L0-100 5-104" fill="none" stroke="#fff3d6" stroke-width="2"/>
+<path d="M-13-38L-13-30M14-38L14-30" stroke="#fff3d6" stroke-width="3" opacity=".45"/>
+</g>
+<g id="ball"><ellipse cy="5" rx="15" ry="7" fill="#1f382c44"/><circle r="12" fill="#fff3d6"/><path d="M-3-6L4-5 6 1 1 5-5 2ZM-11-1L-8-6-9-8M7-9L10-6 11-2M2 10L7 8 10 5" fill="#282d32"/><path d="M-7-8Q-1-13 5-9" stroke="white" stroke-width="2" fill="none"/></g>
+</defs></svg>
+<main class="sheet">
+<header><h1>Sloppy<span>Soccer.</span></h1><div class="tag"><strong>Small toys. Big scrambles.</strong><p>A tabletop football game in satin plastic, warm oak and gloriously imperfect movement.</p></div></header>
+<div class="topline"><span>Art direction / Toy workshop</span><span>3 outfield + 1 goalkeeper per side · Orthographic ¾</span></div>
+<div class="main">
+<figure class="scene">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1100 600" role="img" aria-labelledby="scene-title scene-desc"><title id="scene-title">Tabletop football diorama</title><desc id="scene-desc">An orthographic green pitch inset into an oak board, ivory rigid lattice goals, three coral and three blue outfield toys, and a charcoal keeper at each end.</desc>
+<ellipse cx="557" cy="465" rx="455" ry="78" fill="#604327" opacity=".14" filter="url(#shadow)"/>
+<g transform="matrix(1 -.22 .65 .48 95 300)"><rect x="-25" y="-25" width="700" height="450" rx="18" fill="#8b603c" transform="translate(0 23)"/><rect x="-25" y="-25" width="700" height="450" rx="18" fill="url(#wood)"/><rect width="650" height="400" rx="8" fill="#245539" stroke="#98744e" stroke-width="6"/><rect x="5" y="5" width="640" height="390" rx="3" fill="url(#grass)"/>
+<g fill="none" stroke="#fff3d6" stroke-width="3" opacity=".85"><rect x="22" y="22" width="606" height="356"/><path d="M325 22V378"/><circle cx="325" cy="200" r="60"/><path d="M22 106H119V294H22M628 106H531V294H628M22 154H63V246H22M628 154H587V246H628"/></g><circle cx="325" cy="200" r="4" fill="#fff3d6"/>
+</g>
+<!-- Far goal. Vertical members stay upright, unlike the projected pitch. -->
+<g stroke-linecap="round" stroke-linejoin="round"><path d="M812 281L852 272 945 341 905 350Z" fill="#183b2e" opacity=".18"/><path d="M812 281V217L852 208 945 277V341M812 217L905 286V350M905 286L945 277M852 208V272M812 281L905 350 945 341 852 272" fill="#fff3d6" fill-opacity=".09" stroke="#d3c9ac" stroke-width="4"/>
+<path d="M824 226L864 217M837 236L877 227M850 246L890 237M863 256L903 247M876 266L916 257M889 276L929 267M865 217V282M878 227V292M891 237V302M904 247V312M917 257V322M930 267V332M852 230L945 299M852 251L945 320" fill="none" stroke="#eee4c9" stroke-width="2.5"/>
+<path d="M812 281V217L905 286V350" fill="none" stroke="#fff8e5" stroke-width="7"/></g>
+<use href="#toy" transform="translate(841 310) scale(.46)" style="--kit:#282d32"/>
+<use href="#toy" transform="translate(719 278) scale(.48)" style="--kit:#356bce"/>
+<use href="#toy" transform="translate(747 374) scale(.5)" style="--kit:#356bce"/>
+<use href="#toy" transform="translate(596 333) scale(.5)" style="--kit:#356bce"/>
+<use href="#toy" transform="translate(454 317) scale(.49)"/>
+<use href="#toy" transform="translate(422 411) scale(.51)"/>
+<ellipse cx="562" cy="416" rx="31" ry="13" fill="none" stroke="#ffe183" stroke-width="4"/><path d="M558 423L562 428 566 423" stroke="#ffe183" fill="none" stroke-width="3"/>
+<use href="#toy" transform="translate(562 411) scale(.53)"/>
+<use href="#ball" transform="translate(611 425) scale(.82)"/>
+<path d="M590 430Q610 447 633 436" fill="none" stroke="#fff3d6" stroke-width="2" stroke-dasharray="3 6" opacity=".6"/>
+<use href="#toy" transform="translate(291 386) scale(.52)" style="--kit:#282d32"/>
+<!-- Near goal, rigid square lattice, no fabric net. -->
+<g stroke-linecap="round" stroke-linejoin="round"><path d="M173 358L134 367 238 444 277 435Z" fill="#1b2e22" opacity=".17"/><path d="M173 358V294L134 303V367M134 303L238 380V444M238 380L277 371V435M173 294L277 371M134 367L238 444 277 435 173 358" fill="#fff3d6" fill-opacity=".07" stroke="#d6cdb3" stroke-width="4"/>
+<path d="M147 313V377M160 322V386M173 332V396M186 342V406M199 351V415M212 361V425M225 371V435M134 324L238 401M134 346L238 423M147 313L186 304M160 322L199 313M173 332L212 323M186 342L225 333M199 351L238 342M212 361L251 352M225 371L264 362" fill="none" stroke="#fff3d6" stroke-width="2.5"/>
+<path d="M173 358V294L277 371V435" fill="none" stroke="#fff8e5" stroke-width="7"/></g>
+<path d="M330 171H229L205 257" class="hairline"/><circle cx="205" cy="257" r="4" class="callout"/><text x="230" y="150" class="svg-label">Rigid ivory lattice</text><text x="230" y="169" class="small-label">Square cells. Thick, toy-like posts.</text>
+<path d="M729 478H630L588 428" class="hairline"/><circle cx="588" cy="428" r="4" class="callout"/><text x="733" y="482" class="svg-label">You are here</text><text x="733" y="502" class="small-label">Warm yellow ring + chevron</text>
+<text x="108" y="550" class="svg-label">An entire little match, in one glance.</text><text x="108" y="573" class="small-label">No stadium. No crowds. Just eight toys, one ball and the kitchen table.</text>
+</svg>
+<figcaption>Rounded oak tray, inset striped green pitch, contact shadows and a fixed camera. Keep the goal mouths and ball readable before adding detail.</figcaption>
+</figure>
+<aside class="study"><h2>The molded little footballer</h2><p>One shared body. Two bold kits. A keeper in charcoal.</p>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 390" role="img" aria-labelledby="toy-title"><title id="toy-title">Enlarged original plastic football figure with material callouts</title>
+<path d="M12 32H348M12 94H348M12 156H348M12 218H348M12 280H348M12 342H348" stroke="#d7cbb6" stroke-width="1" stroke-dasharray="3 5"/>
+<use href="#toy" transform="translate(171 312) scale(1.65)"/>
+<path d="M179 61L245 36H328M174 165L244 151H336M193 239L249 251H341M206 302L254 330H335" class="hairline"/>
+<text x="241" y="26" class="small-label">Combed hair cap</text><text x="248" y="141" class="small-label">Satin shell</text><text x="252" y="271" class="small-label">Bare knees</text><text x="249" y="350" class="small-label">Black boots</text>
+<path d="M33 60V312M28 60H38M28 312H38" class="hairline"/><text x="20" y="229" class="small-label" transform="rotate(-90 20 229)">3.2 world units tall</text>
+<circle cx="68" cy="363" r="8" fill="#ef6855"/><circle cx="91" cy="363" r="8" fill="#356bce"/><circle cx="114" cy="363" r="8" fill="#282d32"/><text x="137" y="368" class="small-label">One silhouette, three finishes</text>
+</svg>
+<p class="note">Oversized head, barrel chest, soft elbows. The reference’s spread-arm pose informs the keeper; runners bring their arms down. No licensed badges or borrowed likenesses.</p></aside>
+</div>
+<div class="footer">
+<section><h2>Plastic, grass &amp; oak</h2><div class="swatches" aria-label="Core color palette"><span class="swatch" data-name="Coral" style="background:#ef6855"></span><span class="swatch" data-name="Cobalt" style="background:#356bce"></span><span class="swatch" data-name="Pitch" style="background:#377b55"></span><span class="swatch" data-name="Ivory" style="background:#fff3d6;border:1px solid #d7cbb6"></span><span class="swatch" data-name="Oak" style="background:#bd9165"></span><span class="swatch" data-name="Keeper" style="background:#282d32"></span></div><p class="palette-note">Warm materials, cool team contrast. No metallic skin, neon grass or photographic textures. Hair and boots remain dark at gameplay scale.</p></section>
+<section><h2>A scoreboard, not a dashboard</h2><div class="hud" aria-label="Example scoreboard: Coral zero, Cobalt zero, two minutes remaining"><span class="team">Coral <b>0</b></span><span class="clock">2:00</span><span class="team away"><b>0</b> Cobalt</span></div><p class="hud-note">Illustrative ready-state HUD. Compact ivory/charcoal controls sit outside the pitch. Team names accompany color; selected player gets both a ring and a pointer.</p></section>
+<section><h2>Loose feet. Solid toys.</h2><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 340 102" class="motion" role="img" aria-label="Motion study: lean on run, planted foot on kick, small ball impact"><path d="M7 83H330" stroke="#d7cbb6"/><use href="#toy" transform="translate(57 83) rotate(7) scale(.41)"/><path d="M12 48H25M8 60H25" stroke="#a99b82" stroke-width="2"/><use href="#toy" transform="translate(164 83) rotate(-5) scale(.41)"/><use href="#ball" transform="translate(207 80) scale(.52)"/><use href="#ball" transform="translate(297 55) scale(.52)"/><path d="M231 78Q256 69 278 57M288 32L291 41M314 39L307 45M318 62L311 60" fill="none" stroke="#bd9165" stroke-width="2"/><text x="24" y="101" class="small-label">Lean 7°</text><text x="133" y="101" class="small-label">Kick 120 ms</text><text x="270" y="101" class="small-label">Hop</text></svg><p>Feet cycle, torso tips; never jelly limbs. Ball shadow stays on the pitch. A goal gets one short, warm burst—not a screenful of confetti.</p></section>
+</div>
+<footer><span>Sloppy Soccer / Original procedural art direction<br>SVG concept sheet · Dimensions in DESIGN.md · No remote assets</span><button class="print" type="button" onclick="window.print()">Print workshop sheet</button></footer>
+</main>
+</body>
+</html>

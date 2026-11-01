@@ -1,0 +1,29 @@
+{
+  "name": "Sloppy Soccer Toy Workshop",
+  "colors": {
+    "ink": "#262925", "paper": "#FFF8E9", "ivory": "#FFF3D6",
+    "home": "#EF6855", "away": "#356BCE", "keeper": "#282D32",
+    "pitch": "#377B55", "pitchStripe": "#3F835D", "pitchEdge": "#286044",
+    "oak": "#BD9165", "oakEdge": "#8B603C", "skin": "#DBA978",
+    "hair": "#392C27", "boots": "#171D22", "selection": "#FFE183"
+  },
+  "materials": {
+    "kit": {"roughness": 0.32, "metalness": 0},
+    "skin": {"roughness": 0.5, "metalness": 0},
+    "boots": {"roughness": 0.28, "metalness": 0},
+    "goal": {"roughness": 0.38, "metalness": 0},
+    "pitch": {"roughness": 0.85, "metalness": 0},
+    "oak": {"roughness": 0.72, "metalness": 0}
+  },
+  "camera": {"type": "orthographic", "position": [25, 29, 34], "target": [0, 0, 0], "minVerticalSpan": 31, "fitHorizontalSpan": 44},
+  "geometry": {
+    "pitch": {"width": 32, "depth": 20},
+    "tray": {"width": 36, "depth": 24, "thickness": 0.45, "cornerRadius": 0.6},
+    "goal": {"width": 7, "height": 3.5, "depth": 2, "postRadius": 0.1, "latticeRodRadius": 0.035, "latticeCell": 0.5},
+    "toy": {"height": 3.2, "bodyWidth": 0.95, "headRadius": 0.32, "headHeight": 0.55, "collisionRadius": 0.62},
+    "ball": {"radius": 0.28},
+    "selection": {"outerRadius": 0.84, "innerRadius": 0.74, "sceneY": 0.025}
+  },
+  "motion": {"maxLeanDegrees": 7, "runCycleHz": [7, 9], "kickMs": 120, "recoverMs": 160, "goalBurstMs": 350, "scorePopMs": 140},
+  "coordinates": {"simulationX": "scene.x", "simulationY": "scene.z", "ballZ": "scene.y"}
+}

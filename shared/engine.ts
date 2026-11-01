@@ -1,0 +1,263 @@
+import { DEFAULT_CONFIG, FIELD, type GameState, type InputState, type MatchConfig, type Player, type Team } from './types.js';
+
+const direction = (team: Team) => team === 'home' ? 1 : -1;
+interface Runtime {
+  shoot: boolean; pass: boolean; switchPlayer: boolean;
+  pickupLock: number; kickerId: string | null;
+  aiCooldowns: Map<string, number>;
+}
+const runtimes = new WeakMap<GameState, Runtime>();
+function runtime(state: GameState): Runtime {
+  let value = runtimes.get(state);
+  if (!value) {
+    value = { shoot: false, pass: false, switchPlayer: false, pickupLock: 0, kickerId: null, aiCooldowns: new Map() };
+    runtimes.set(state, value);
+  }
+  return value;
+}
+
+export function createGame(config: Partial<MatchConfig> = {}): GameState {
+  const players: Player[] = [];
+  for (const team of ['home', 'away'] as const) {
+    const sign = direction(team);
+    for (let i = 0; i < 4; i++) players.push({
+      id: `${team}-${i}`, team, role: i === 3 ? 'keeper' : 'outfield',
+      x: (i === 3 ? -14.6 : i === 0 ? (team === 'home' ? -1 : -5) : -6) * sign,
+      y: i === 1 ? -5 : i === 2 ? 5 : 0,
+      vx: 0, vy: 0, facing: sign === 1 ? 0 : Math.PI, stamina: 1,
+    });
+  }
+  return { players, ball: { x: -0.1, y: 0, vx: 0, vy: 0, z: 0, vz: 0, ownerId: 'home-0' },
+    score: { home: 0, away: 0 }, timeRemaining: typeof config.duration === 'number' && Number.isFinite(config.duration) && config.duration > 0 && config.duration <= 600 ? config.duration : DEFAULT_CONFIG.duration,
+    phase: 'ready', phaseTimer: 0, controlledId: 'home-0', lastScorer: null, elapsed: 0 };
+}
+
+export function startGame(state: GameState): void {
+  if (state.phase === 'ready') state.phase = 'playing';
+}
+const clamp = (n: number, low: number, high: number) => Math.max(low, Math.min(high, n));
+const axis = (n: number) => Number.isFinite(n) ? clamp(n, -1, 1) : 0;
+function move(player: Player, x: number, y: number, speed: number, dt: number): void {
+  const length = Math.max(1, Math.hypot(x, y));
+  player.vx = x / length * speed;
+  player.vy = y / length * speed;
+  if (x || y) player.facing = Math.atan2(y, x);
+  player.x = clamp(player.x + player.vx * dt, -FIELD.width / 2 + FIELD.playerRadius, FIELD.width / 2 - FIELD.playerRadius);
+  player.y = clamp(player.y + player.vy * dt, -FIELD.height / 2 + FIELD.playerRadius, FIELD.height / 2 - FIELD.playerRadius);
+}
+function dribble(state: GameState): void {
+  const owner = state.players.find(p => p.id === state.ball.ownerId);
+  if (!owner) return;
+  state.ball.x = clamp(owner.x + Math.cos(owner.facing) * 0.9, -16, 16);
+  state.ball.y = clamp(owner.y + Math.sin(owner.facing) * 0.9, -9.72, 9.72);
+  state.ball.vx = owner.vx; state.ball.vy = owner.vy;
+  state.ball.z = state.ball.vz = 0;
+}
+function shoot(state: GameState, player: Player, x: number, y: number): void {
+  let dx = x || y ? x : Math.cos(player.facing);
+  let dy = x || y ? y : Math.sin(player.facing);
+  const length = Math.hypot(dx, dy) || 1;
+  dx /= length; dy /= length;
+  const sign = direction(player.team);
+  const gx = sign * 16 - player.x, gy = -player.y;
+  const goalDistance = Math.hypot(gx, gy);
+  if (dx * sign > 0.5 && goalDistance < 24 && (dx * gx + dy * gy) / goalDistance > 0.65) {
+    dx = dx * 0.4 + gx / goalDistance * 0.6;
+    dy = dy * 0.4 + gy / goalDistance * 0.6;
+  }
+  const aimLength = Math.hypot(dx, dy);
+  state.ball.ownerId = null;
+  state.ball.vx = dx / aimLength * 22;
+  state.ball.vy = dy / aimLength * 22;
+  state.ball.vz = 3.2;
+  runtime(state).pickupLock = 0.24;
+  runtime(state).kickerId = player.id;
+}
+function pass(state: GameState, player: Player, x: number, y: number): void {
+  const length = Math.hypot(x, y);
+  const dx = length ? x / length : Math.cos(player.facing);
+  const dy = length ? y / length : Math.sin(player.facing);
+  const candidates = state.players.filter(p => p.team === player.team && p.role === 'outfield' && p.id !== player.id);
+  const rating = (p: Player) => {
+    const distance = Math.hypot(p.x - player.x, p.y - player.y) || 1;
+    return ((p.x - player.x) * dx + (p.y - player.y) * dy) / distance * 8 - distance * 0.25;
+  };
+  candidates.sort((a, b) => rating(b) - rating(a));
+  const target = candidates[0];
+  if (!target) return;
+  const tx = target.x - state.ball.x, ty = target.y - state.ball.y;
+  const distance = Math.hypot(tx, ty) || 1;
+  state.ball.ownerId = null;
+  state.ball.vx = tx / distance * 15;
+  state.ball.vy = ty / distance * 15;
+  state.ball.vz = 0.8;
+  runtime(state).pickupLock = 0.24;
+  runtime(state).kickerId = player.id;
+  if (player.id === state.controlledId) state.controlledId = target.id;
+}
+function kickoff(state: GameState, team: Team): void {
+  for (const p of state.players) {
+    const slot = Number(p.id.split('-')[1]);
+    const sign = direction(p.team);
+    p.x = (p.role === 'keeper' ? -14.6 : slot === 0 ? (p.team === team ? -1 : -5) : -6) * sign;
+    p.y = slot === 1 ? -5 : slot === 2 ? 5 : 0;
+    p.vx = p.vy = 0; p.facing = sign === 1 ? 0 : Math.PI;
+    p.stamina = Math.max(p.stamina, 0.65);
+  }
+  state.controlledId = 'home-0';
+  state.ball.ownerId = `${team}-0`;
+  dribble(state);
+  state.phase = 'playing'; state.phaseTimer = 0;
+  const meta = runtime(state);
+  meta.pickupLock = 0; meta.kickerId = null; meta.aiCooldowns.clear();
+}
+function updateOutfieldAI(state: GameState, dt: number, config: Partial<MatchConfig>): void {
+  const owner = state.players.find(p => p.id === state.ball.ownerId);
+  for (const team of ['home', 'away'] as const) {
+    const sign = direction(team);
+    const figures = state.players.filter(p => p.team === team && p.role === 'outfield' && p.id !== state.controlledId);
+    const closest = [...figures].sort((a, b) => Math.hypot(a.x - state.ball.x, a.y - state.ball.y) - Math.hypot(b.x - state.ball.x, b.y - state.ball.y))[0];
+    for (const p of figures) {
+      let tx: number, ty: number;
+      if (owner?.id === p.id) { tx = sign * 14; ty = p.y * 0.4; }
+      else if (owner?.team !== team && p === closest) {
+        tx = state.ball.x + state.ball.vx * 0.12; ty = state.ball.y + state.ball.vy * 0.12;
+      } else {
+        const slot = Number(p.id.split('-')[1]);
+        tx = clamp(state.ball.x + sign * (owner?.team === team ? 3 : -3), -11, 11);
+        ty = slot === 1 ? -4.5 : slot === 2 ? 4.5 : 0;
+      }
+      const speed = team === 'home' ? 4.5 : config.difficulty === 'easy' ? 3.3 : config.difficulty === 'hard' ? 5.3 : 4.2;
+      move(p, tx - p.x, ty - p.y, speed, dt);
+      p.stamina = clamp(p.stamina + dt * 0.15, 0, 1);
+    }
+  }
+}
+function updateKeepers(state: GameState, dt: number, config: Partial<MatchConfig>): void {
+  for (const keeper of state.players.filter(p => p.role === 'keeper')) {
+    const sign = direction(keeper.team);
+    const homeX = -sign * 14.6;
+    const towardsGoal = state.ball.vx * sign < -0.1;
+    const travel = towardsGoal ? Math.max(0, (homeX - state.ball.x) / state.ball.vx) : 0;
+    const prediction = state.ball.y + state.ball.vy * Math.min(travel, 0.4);
+    const targetY = clamp(prediction, -FIELD.goalWidth / 2 + 0.75, FIELD.goalWidth / 2 - 0.75);
+    const speed = keeper.team === 'away' && config.difficulty === 'easy' ? 3 : config.difficulty === 'hard' ? 5 : 4.2;
+    move(keeper, homeX - keeper.x, targetY - keeper.y, speed, dt);
+    keeper.facing = sign === 1 ? 0 : Math.PI;
+  }
+}
+function contestPossession(state: GameState): void {
+  const owner = state.players.find(p => p.id === state.ball.ownerId);
+  const meta = runtime(state);
+  if (!owner || (meta.kickerId === owner.id && meta.pickupLock > 0)) return;
+  const challenger = state.players.filter(p => p.team !== owner.team
+    && Math.hypot(p.x - state.ball.x, p.y - state.ball.y) < FIELD.playerRadius + FIELD.ballRadius)
+    .sort((a, b) => Math.hypot(a.x - state.ball.x, a.y - state.ball.y) - Math.hypot(b.x - state.ball.x, b.y - state.ball.y))[0];
+  if (challenger) {
+    state.ball.ownerId = challenger.id;
+    meta.kickerId = challenger.id; meta.pickupLock = 0.45;
+    meta.aiCooldowns.set(challenger.id, 0.45);
+    dribble(state);
+  }
+}
+function updateAIAction(state: GameState, dt: number): void {
+  const meta = runtime(state);
+  for (const [id, seconds] of meta.aiCooldowns) meta.aiCooldowns.set(id, Math.max(0, seconds - dt));
+  const owner = state.players.find(p => p.id === state.ball.ownerId);
+  if (!owner || owner.id === state.controlledId || (meta.aiCooldowns.get(owner.id) ?? 0) > 0 || state.elapsed < 0.3) return;
+  const sign = direction(owner.team);
+  if (owner.role === 'keeper') {
+    shoot(state, owner, sign, Math.sin(state.elapsed) * 0.25);
+    meta.aiCooldowns.set(owner.id, 0.8);
+  } else if (16 - owner.x * sign < 13) {
+    shoot(state, owner, sign * 16 - owner.x, Math.sin(state.elapsed * 1.7) * 2 - owner.y);
+    meta.aiCooldowns.set(owner.id, 1);
+  } else if (state.elapsed > 1 && state.players.some(p => p.team === owner.team && p.role === 'outfield' && p.id !== owner.id && (p.x - owner.x) * sign > 3.5)) {
+    pass(state, owner, sign, 0);
+    meta.aiCooldowns.set(owner.id, 1.4);
+  }
+}
+export function stepGame(state: GameState, input: InputState, dt: number, config: Partial<MatchConfig> = {}): void {
+  if (state.phase === 'ready' || state.phase === 'finished' || !Number.isFinite(dt) || dt <= 0) return;
+  if (state.phase === 'goal') {
+    const meta = runtime(state);
+    meta.shoot = !!input.shoot; meta.pass = !!input.pass; meta.switchPlayer = !!input.switchPlayer;
+    state.phaseTimer = Math.max(0, state.phaseTimer - Math.min(dt, 0.1));
+    if (state.phaseTimer < 1e-9) kickoff(state, state.lastScorer === 'home' ? 'away' : 'home');
+    return;
+  }
+  dt = Math.min(dt, 0.1, state.timeRemaining);
+  const meta = runtime(state);
+  meta.pickupLock = Math.max(0, meta.pickupLock - dt);
+  const shotPressed = !!input.shoot && !meta.shoot;
+  const passPressed = !!input.pass && !meta.pass;
+  const switchPressed = !!input.switchPlayer && !meta.switchPlayer;
+  meta.shoot = !!input.shoot;
+  meta.pass = !!input.pass;
+  meta.switchPlayer = !!input.switchPlayer;
+  if (switchPressed) {
+    const candidates = state.players.filter(p => p.team === 'home' && p.role === 'outfield' && p.id !== state.controlledId);
+    candidates.sort((a, b) => Math.hypot(a.x - state.ball.x, a.y - state.ball.y) - Math.hypot(b.x - state.ball.x, b.y - state.ball.y));
+    if (candidates[0]) state.controlledId = candidates[0].id;
+  }
+  const player = state.players.find(p => p.id === state.controlledId);
+  if (player) {
+    const x = axis(input.moveX), y = axis(input.moveY);
+    const sprint = input.sprint && player.stamina > 0.08 && Math.hypot(x, y) > 0;
+    move(player, x, y, sprint ? 8.6 : 5.6, dt);
+    player.stamina = clamp(player.stamina + (sprint ? -0.32 : 0.2) * dt, 0, 1);
+  }
+  updateOutfieldAI(state, dt, config);
+  updateKeepers(state, dt, config);
+  dribble(state);
+  contestPossession(state);
+  updateAIAction(state, dt);
+  if (player && state.ball.ownerId === player.id && shotPressed) shoot(state, player, axis(input.moveX), axis(input.moveY));
+  else if (player && state.ball.ownerId === player.id && passPressed) pass(state, player, axis(input.moveX), axis(input.moveY));
+  if (!state.ball.ownerId) {
+    const ball = state.ball;
+    ball.x += ball.vx * dt;
+    ball.y += ball.vy * dt;
+    if (ball.z > 0 || ball.vz !== 0) {
+      ball.vz -= 11 * dt;
+      ball.z += ball.vz * dt;
+      if (ball.z <= 0) {
+        ball.z = 0;
+        ball.vz = Math.abs(ball.vz) > 0.9 ? -ball.vz * 0.3 : 0;
+      }
+    }
+    const friction = Math.exp(-(ball.z > 0 ? 0.35 : 1.45) * dt);
+    ball.vx *= friction; ball.vy *= friction;
+    if (Math.hypot(ball.vx, ball.vy) < 0.04) ball.vx = ball.vy = 0;
+    const side = FIELD.height / 2 - FIELD.ballRadius;
+    if (Math.abs(ball.y) > side) {
+      ball.y = Math.sign(ball.y) * side;
+      ball.vy = -Math.sign(ball.y) * Math.abs(ball.vy) * 0.78;
+    }
+    const end = FIELD.width / 2 - FIELD.ballRadius;
+    const mouth = Math.abs(ball.y) <= FIELD.goalWidth / 2 - FIELD.ballRadius && ball.z < 2.4;
+    if (Math.abs(ball.x) > end && !mouth) {
+      ball.x = Math.sign(ball.x) * end;
+      ball.vx = -Math.sign(ball.x) * Math.abs(ball.vx) * 0.78;
+    }
+    if (ball.z < 0.65) {
+      const candidates = state.players.filter(p => !(p.id === meta.kickerId && meta.pickupLock > 0)
+        && Math.hypot(p.x - ball.x, p.y - ball.y) < FIELD.playerRadius + FIELD.ballRadius + 0.18);
+      candidates.sort((a, b) => Math.hypot(a.x - ball.x, a.y - ball.y) - Math.hypot(b.x - ball.x, b.y - ball.y));
+      if (candidates[0]) { ball.ownerId = candidates[0].id; dribble(state); }
+    }
+  }
+  if (Math.abs(state.ball.x) > FIELD.width / 2 + FIELD.ballRadius
+    && Math.abs(state.ball.y) <= FIELD.goalWidth / 2 - FIELD.ballRadius && state.ball.z < 2.4) {
+    const team: Team = state.ball.x > 0 ? 'home' : 'away';
+    state.score[team]++;
+    state.lastScorer = team;
+    state.phase = 'goal'; state.phaseTimer = 1.5;
+    state.ball.ownerId = null;
+    state.ball.vx = state.ball.vy = state.ball.vz = 0;
+    for (const p of state.players) p.vx = p.vy = 0;
+  }
+  state.timeRemaining = Math.max(0, state.timeRemaining - dt);
+  state.elapsed += dt;
+  if (state.timeRemaining <= 1e-9) { state.timeRemaining = 0; state.phase = 'finished'; }
+}
