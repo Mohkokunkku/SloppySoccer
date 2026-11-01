@@ -13,6 +13,59 @@ const isolate = (state: GameState) => {
   state.ball.ownerId = null;
 };
 
+describe('crowded goalkeeper possession', () => {
+  function crowdedKeeper(team: 'home' | 'away') {
+    const state = play(); isolate(state);
+    const sign = team === 'home' ? 1 : -1;
+    const keeper = state.players.find(p => p.team === team && p.role === 'keeper')!;
+    const attacker = state.players.find(p => p.team !== team && p.role === 'outfield' && p.id !== state.controlledId)!;
+    keeper.x = -sign * 14.6; keeper.y = 0;
+    attacker.x = keeper.x + sign * 1.15; attacker.y = 0;
+    Object.assign(state.ball, { ownerId: keeper.id, x: keeper.x + sign * 0.9, y: 0, vx: 0, vy: 0, z: 0, vz: 0 });
+    return { state, keeper, attacker, sign };
+  }
+  it.each(['home', 'away'] as const)('protects a ball held by the %s keeper from a nearby attacker', team => {
+    const { state, keeper } = crowdedKeeper(team);
+    // AI waits until elapsed 0.3 before acting: exercise possession before a kick.
+    stepGame(state, input(), frame);
+    expect(state.ball.ownerId).toBe(keeper.id);
+  });
+  it.each((['home', 'away'] as const).flatMap(team => (['easy', 'normal', 'hard'] as const).map(difficulty => ({ team, difficulty }))))('escapes repeated $team keeper pressure on $difficulty within a second', ({ team, difficulty }) => {
+    const { state, keeper, attacker, sign } = crowdedKeeper(team); state.elapsed = 10;
+    // First clearance starts the keeper's normal action cooldown. Immediately
+    // catching again must not let crowding reset that cooldown indefinitely.
+    stepGame(state, input(), frame, { difficulty });
+    expect(state.ball.ownerId).toBeNull();
+    Object.assign(state.ball, { ownerId: keeper.id, z: 0, vz: 0 });
+    const secondAttacker = state.players.find(p => p.team !== team && p.role === 'outfield' && p.id !== attacker.id && p.id !== state.controlledId)!;
+    secondAttacker.x = keeper.x + sign * 1.3; secondAttacker.y = 0.3;
+    let releaseAfter = Infinity;
+    let progress = 0;
+    for (let i = 0; i < 90; i++) {
+      stepGame(state, input(), frame, { difficulty });
+      if (state.ball.ownerId !== keeper.id && releaseAfter === Infinity) {
+        releaseAfter = (i + 1) * frame;
+        expect(state.ball.ownerId).toBeNull();
+        expect(state.ball.z).toBeGreaterThan(0.65);
+      }
+      progress = Math.max(progress, (state.ball.x - keeper.x) * sign);
+    }
+    expect(releaseAfter).toBeLessThan(1);
+    expect(progress).toBeGreaterThan(10);
+    expect(state.phase).toBe('playing');
+  });
+  it.each(['home', 'away'] as const)('clears over an attacker crowding the %s keeper instead of being recaptured immediately', team => {
+    const { state, sign } = crowdedKeeper(team); state.elapsed = 1;
+    stepGame(state, input(), frame);
+    expect(state.ball.ownerId).toBeNull();
+    expect(state.ball.z).toBeGreaterThan(0.65);
+    expect(state.ball.vx * sign).toBeGreaterThan(15);
+    advance(state, 0.4);
+    expect((state.ball.x + sign * 14.6) * sign).toBeGreaterThan(6);
+    expect(state.phase).toBe('playing');
+  });
+});
+
 describe('goalkeepers', () => {
   it.each(['home', 'away'] as const)('tracks the ball across the %s goal mouth without leaving its box', team => {
     const state = play(); isolate(state); const keeper = state.players.find(p => p.team === team && p.role === 'keeper')!;

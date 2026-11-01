@@ -1,7 +1,8 @@
 # Verification
 
 ## Executed on this PC
-- `npm run check`: **100 tests passed across 13 files**, strict TypeScript typecheck passed, Vite production frontend and NodeNext backend compiled.
+- `npm run check`: **110 tests passed across 13 files**, strict TypeScript typecheck passed, Vite production frontend and NodeNext backend compiled.
+- Crowded-keeper regressions reproduced held possession theft and immediate recapture of a low clearance. Ten additional tests now cover protected possession and lofted clearance for both teams, plus repeated catches under pressure across easy/normal/hard; the full 110-test run passed.
 - A real Windows archive-extraction regression reproduced GNU tar interpreting the drive-letter path as a remote host. Using a relative `source.tar` argument with an absolute working directory fixed it; the regression and the full 100-test run passed.
 - Independent review passed after the signal-exit cleanup fix; the two new process-lifecycle regressions passed before the full 99-test rerun.
 - `npm run test:e2e`: **4 Chromium tests passed**: WebGL page/start/pause/resume; 390px phone layout with no horizontal overflow; full one-minute match with exactly one real result POST and API read-back; graphical design board rendering.

@@ -149,7 +149,8 @@ function updateKeepers(state: GameState, dt: number, config: Partial<MatchConfig
 function contestPossession(state: GameState): void {
   const owner = state.players.find(p => p.id === state.ball.ownerId);
   const meta = runtime(state);
-  if (!owner || (meta.kickerId === owner.id && meta.pickupLock > 0)) return;
+  // A caught keeper ball is held securely, not dribbled/tackleable possession.
+  if (!owner || owner.role === 'keeper' || (meta.kickerId === owner.id && meta.pickupLock > 0)) return;
   const challenger = state.players.filter(p => p.team !== owner.team
     && Math.hypot(p.x - state.ball.x, p.y - state.ball.y) < FIELD.playerRadius + FIELD.ballRadius)
     .sort((a, b) => Math.hypot(a.x - state.ball.x, a.y - state.ball.y) - Math.hypot(b.x - state.ball.x, b.y - state.ball.y))[0];
@@ -168,6 +169,10 @@ function updateAIAction(state: GameState, dt: number): void {
   const sign = direction(owner.team);
   if (owner.role === 'keeper') {
     shoot(state, owner, sign, Math.sin(state.elapsed) * 0.25);
+    // Release from the keeper's hands, above the outfield pickup band. A low
+    // foot-level clearance can be caught in this same step by a crowding striker.
+    state.ball.z = 1.1;
+    state.ball.vz = 5.4;
     meta.aiCooldowns.set(owner.id, 0.8);
   } else if (16 - owner.x * sign < 13) {
     shoot(state, owner, sign * 16 - owner.x, Math.sin(state.elapsed * 1.7) * 2 - owner.y);
