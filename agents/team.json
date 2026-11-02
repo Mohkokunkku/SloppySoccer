@@ -1,0 +1,40 @@
+{
+  "version": 1,
+  "architect": {
+    "mode": "current-session",
+    "responsibilities": [
+      "contracts",
+      "game mechanics",
+      "integration",
+      "independent verification",
+      "Git and deployment"
+    ]
+  },
+  "frontend": {
+    "mode": "hermes-cli-proposals",
+    "enabled": true,
+    "provider": "openai-codex",
+    "model": "gpt-6.1-sol",
+    "reasoning": "low",
+    "requestedLabel": "gpt-6.1sol light",
+    "cloudFallback": false,
+    "maxTurns": 2,
+    "softTimeBudgetSeconds": 90,
+    "toolsets": "file",
+    "allowedTaskRoot": "agents/frontend-tasks",
+    "outputRoot": ".local-server/agents/frontend",
+    "writeSourceFiles": false
+  },
+  "policy": {
+    "taskSize": "one pure function or one small UI component",
+    "approval": "architect reviews proposal before applying",
+    "tests": "architect-owned tests, strict typecheck, full unit suite and browser checks",
+    "otherWorkers": "no implicit cloud delegation"
+  },
+  "retiredFrontend": {
+    "provider": "ollama",
+    "model": "deepseek-r1:14b",
+    "enabled": false,
+    "automaticFallback": false
+  }
+}

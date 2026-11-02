@@ -41,6 +41,14 @@ test('a complete one-minute match saves exactly once to the real backend', async
   expect(posts).toHaveLength(1);
 });
 
+test('shows the selected tactical role and updates it when switching players',async({page})=>{
+  await page.goto('/');
+  await expect(page.locator('#controlled-role')).toHaveText('Attacker');
+  await expect(page.locator('#controlled-role')).toHaveAttribute('title','Find space ahead for a pass.');
+  await page.getByRole('button',{name:'Start match'}).click();
+  await page.keyboard.press('q');
+  await expect(page.locator('#controlled-role')).toHaveText(/Midfielder|Defender/);
+});
 test('visual design board is served alongside the production game',async({page})=>{
   await page.goto('/design-board.html');
   await expect(page.locator('svg[role="img"]').first()).toBeVisible();

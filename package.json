@@ -15,6 +15,7 @@
     "deploy:local": "tsx scripts/deploy-local.ts",
     "serve:local": "tsx scripts/serve-local.ts",
     "setup:local-cd": "tsx scripts/setup-local-cd.ts",
+    "agent:frontend": "tsx scripts/frontend-agent.ts",
     "rollback:local": "tsx scripts/rollback-local.ts"
   },
   "dependencies": {

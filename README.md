@@ -12,6 +12,17 @@ npm start
 
 Open http://127.0.0.1:3000. This is **single-player versus AI**, with three outfield figures **plus a goalkeeper on each side** (eight figures). It is not online multiplayer. Match results are casual local records, not server-verified competition scores.
 
+## Role-based AI branch
+`feature/role-based-ai` adds persistent attacker/midfielder/defender roles. One AI chases or presses; the attacker seeks a clear forward passing lane, midfield screens/connects play, and defense stays underneath. Settled support players stop inside a deadzone; tactical targets refresh every0.2seconds, with immediate replanning after possession/control changes. User movement and the keeper jam fix remain intact.
+
+The selected role is shown under the pitch; hover its label for a short role hint. Frontend code proposals use `gpt-6.1-sol` with low reasoning. See `agents/README.md`.
+
+For an isolated Windows Git-Bash preview after `npm run build`:
+```sh
+PORT=3001 DATA_DIR="D:/SloppySoccer/Game/.local-server/role-preview-data" npm start
+```
+Open http://127.0.0.1:3001. This does not merge or deploy the branch to main.
+
 ## Development
 ```sh
 npm run dev:server   # API on localhost:3000

@@ -1,3 +1,4 @@
+import { planTeamMovement, type TacticalIntent } from './tactics.js';
 import { DEFAULT_CONFIG, FIELD, type GameState, type InputState, type MatchConfig, type Player, type Team } from './types.js';
 
 const direction = (team: Team) => team === 'home' ? 1 : -1;
@@ -5,12 +6,13 @@ interface Runtime {
   shoot: boolean; pass: boolean; switchPlayer: boolean;
   pickupLock: number; kickerId: string | null;
   aiCooldowns: Map<string, number>;
+  tacticalPlans: Map<Team, {context:string;nextAt:number;intents:TacticalIntent[]}>;
 }
 const runtimes = new WeakMap<GameState, Runtime>();
 function runtime(state: GameState): Runtime {
   let value = runtimes.get(state);
   if (!value) {
-    value = { shoot: false, pass: false, switchPlayer: false, pickupLock: 0, kickerId: null, aiCooldowns: new Map() };
+    value = { shoot: false, pass: false, switchPlayer: false, pickupLock: 0, kickerId: null, aiCooldowns: new Map(), tacticalPlans: new Map() };
     runtimes.set(state, value);
   }
   return value;
@@ -22,6 +24,7 @@ export function createGame(config: Partial<MatchConfig> = {}): GameState {
     const sign = direction(team);
     for (let i = 0; i < 4; i++) players.push({
       id: `${team}-${i}`, team, role: i === 3 ? 'keeper' : 'outfield',
+      ...(i < 3 ? { tacticalRole: (['attacker', 'midfielder', 'defender'] as const)[i] } : {}),
       x: (i === 3 ? -14.6 : i === 0 ? (team === 'home' ? -1 : -5) : -6) * sign,
       y: i === 1 ? -5 : i === 2 ? 5 : 0,
       vx: 0, vy: 0, facing: sign === 1 ? 0 : Math.PI, stamina: 1,
@@ -109,28 +112,29 @@ function kickoff(state: GameState, team: Team): void {
   dribble(state);
   state.phase = 'playing'; state.phaseTimer = 0;
   const meta = runtime(state);
-  meta.pickupLock = 0; meta.kickerId = null; meta.aiCooldowns.clear();
+  meta.pickupLock = 0; meta.kickerId = null; meta.aiCooldowns.clear(); meta.tacticalPlans.clear();
 }
 function updateOutfieldAI(state: GameState, dt: number, config: Partial<MatchConfig>): void {
-  const owner = state.players.find(p => p.id === state.ball.ownerId);
-  for (const team of ['home', 'away'] as const) {
-    const sign = direction(team);
-    const figures = state.players.filter(p => p.team === team && p.role === 'outfield' && p.id !== state.controlledId);
-    const closest = [...figures].sort((a, b) => Math.hypot(a.x - state.ball.x, a.y - state.ball.y) - Math.hypot(b.x - state.ball.x, b.y - state.ball.y))[0];
-    for (const p of figures) {
-      let tx: number, ty: number;
-      if (owner?.id === p.id) { tx = sign * 14; ty = p.y * 0.4; }
-      else if (owner?.team !== team && p === closest) {
-        tx = state.ball.x + state.ball.vx * 0.12; ty = state.ball.y + state.ball.vy * 0.12;
-      } else {
-        const slot = Number(p.id.split('-')[1]);
-        tx = clamp(state.ball.x + sign * (owner?.team === team ? 3 : -3), -11, 11);
-        ty = slot === 1 ? -4.5 : slot === 2 ? 4.5 : 0;
-      }
-      const speed = team === 'home' ? 4.5 : config.difficulty === 'easy' ? 3.3 : config.difficulty === 'hard' ? 5.3 : 4.2;
-      move(p, tx - p.x, ty - p.y, speed, dt);
-      p.stamina = clamp(p.stamina + dt * 0.15, 0, 1);
+  // Plan both sides before moving either side; keep user control authoritative.
+  const meta = runtime(state);
+  const context = `${state.ball.ownerId}:${state.controlledId}`;
+  const intents: TacticalIntent[] = [];
+  for (const team of ['home','away'] as const) {
+    let plan = meta.tacticalPlans.get(team);
+    if (!plan || plan.context !== context || state.elapsed >= plan.nextAt) {
+      plan = {context,nextAt:state.elapsed + 0.2,intents:planTeamMovement(state,team)};
+      meta.tacticalPlans.set(team,plan);
     }
+    intents.push(...plan.intents);
+  }
+  for (const intent of intents) {
+    const p = state.players.find(player => player.id === intent.playerId);
+    if (!p || p.id === state.controlledId || p.role !== 'outfield') continue;
+    const dx = intent.x - p.x, dy = intent.y - p.y;
+    const speed = p.team === 'home' ? 4.5 : config.difficulty === 'easy' ? 3.3 : config.difficulty === 'hard' ? 5.3 : 4.2;
+    if (Math.hypot(dx,dy) <= intent.arrivalRadius) move(p,0,0,0,dt);
+    else move(p,dx,dy,speed,dt);
+    p.stamina = clamp(p.stamina + dt * 0.15,0,1);
   }
 }
 function updateKeepers(state: GameState, dt: number, config: Partial<MatchConfig>): void {

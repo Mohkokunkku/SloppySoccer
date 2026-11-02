@@ -1,0 +1,14 @@
+{
+  "id": "role-hint",
+  "target": "src/role-hint.ts",
+  "description": "Write one tiny frontend text helper. Do not use tools or change any file.",
+  "requirements": [
+    "Return only JSON {\"code\":\"...\"}. The code must contain only one exported TypeScript function named roleHint, without imports or markdown.",
+    "Exact signature: export function roleHint(role: 'attacker' | 'midfielder' | 'defender' | undefined): string",
+    "For attacker return exactly \"Find space ahead for a pass.\"",
+    "For midfielder return exactly \"Support the carrier and block passing lanes.\"",
+    "For defender return exactly \"Stay goal-side and protect the space behind.\"",
+    "For undefined return exactly \"Keep your shape and support the team.\"",
+    "Pure lookup/conditionals only. No state mutations, IO, network calls, DOM or commands."
+  ]
+}

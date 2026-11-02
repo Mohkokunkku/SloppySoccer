@@ -6,7 +6,8 @@ import { FixedStepper } from './loop';
 import { formatTime, matchPresentation, sanitizeConfig, SaveOnce } from './model';
 import { ToyRenderer } from './renderer';
 import { mergeResults, parseResults } from './results';
-import { completedPayload } from './ui';
+import { completedPayload, controlledRoleLabel } from './ui';
+import { roleHint } from './role-hint';
 
 const app = document.querySelector<HTMLDivElement>('#app');
 if (!app) throw new Error('Missing app root');
@@ -14,7 +15,7 @@ app.innerHTML = `
   <main class="workshop">
     <header class="masthead">
       <a class="wordmark" href="/" aria-label="Sloppy Soccer home">Sloppy<span>Soccer<span class="logo-ball" aria-hidden="true">✳</span></span></a>
-      <p class="tagline">Little legs. Big game.</p>
+      <p class="tagline">Role-based AI preview</p>
       <a class="design-link" href="/design-board.html">Inside the toy box <span aria-hidden="true">↗</span></a>
     </header>
     <section class="game-box" aria-label="Sloppy Soccer game">
@@ -53,6 +54,7 @@ app.innerHTML = `
       </div>
       <div class="control-strip">
         <p class="team-note"><span class="team-dot" aria-hidden="true"></span> You play Coral <span aria-hidden="true">→</span></p>
+        <p class="team-note" aria-live="polite">Selected: <span id="controlled-role">Attacker</span></p>
         <div class="keyboard-guide" aria-label="Keyboard controls"><span><kbd>WASD</kbd> / <kbd>↑↓←→</kbd> Move</span><span><kbd>Space</kbd> Shoot</span><span><kbd>E</kbd> Pass</span><span><kbd>Q</kbd> Switch</span><span><kbd>Shift</kbd> Sprint</span><span><kbd>Esc</kbd> Pause</span></div>
         <button class="quiet-button touch-toggle" id="touch-toggle" type="button" aria-pressed="false" aria-controls="touch-controls">Touch controls</button>
       </div>
@@ -190,6 +192,10 @@ function updateUI(): void {
   setText(element('home-score'), String(state.score.home));
   setText(element('away-score'), String(state.score.away));
   setText(element('clock'), formatTime(state.timeRemaining));
+  setText(element('controlled-role'), controlledRoleLabel(state));
+  const selectedRole = state.players.find(player => player.id === state.controlledId)?.tacticalRole;
+  const hint = roleHint(selectedRole);
+  if (element('controlled-role').title !== hint) element('controlled-role').title = hint;
   const view = matchPresentation(state.phase, paused, state.score.home, state.score.away);
   const phaseLabel = paused ? 'Paused' : state.phase === 'ready' ? 'Kick-off' : state.phase === 'finished' ? 'Full time' : state.phase === 'goal' ? 'Goal!' : 'In play';
   setText(element('phase-label'), phaseLabel);

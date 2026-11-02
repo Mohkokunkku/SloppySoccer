@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { planTeamMovement } from './tactics.js';
 import { createGame, startGame, stepGame } from './engine';
 import { EMPTY_INPUT, FIELD, type GameState, type InputState } from './types';
 
@@ -330,6 +331,55 @@ describe('safety and keeper saves', () => {
       stepGame(a, controls, frame); stepGame(b, controls, frame);
     }
     expect(a).toEqual(b);
+  });
+});
+
+describe('role-aware AI movement', () => {
+  it('keeps the defender underneath the midfield support while the team attacks', () => {
+    const state=play(); state.players[0]!.x=5;
+    for(const p of state.players.filter(p=>p.team==='away')) {p.x=14;p.y=9;}
+    advance(state,2);
+    expect(state.ball.ownerId).toBe(state.controlledId);
+    expect(state.players[2]!.x).toBeLessThan(-3.5);
+    expect(state.players[1]!.x).toBeGreaterThan(state.players[2]!.x+2);
+  });
+  it('hands control over immediately without AI moving the selected defender', () => {
+    const state=play(); stepGame(state,input(),frame);
+    state.controlledId='home-2';
+    stepGame(state,input({moveY:1}),frame);
+    expect(state.players[2]!.vx).toBe(0); expect(state.players[2]!.vy).toBeCloseTo(5.6);
+    expect(state.players[0]!.vx).toBeGreaterThan(0);
+    expect(state.players[2]!.tacticalRole).toBe('defender');
+  });
+  it('does not retarget support every animation frame when the carrier moves', () => {
+    const state = play();
+    for (const p of state.players.filter(p => p.team === 'away')) { p.x=14; p.y=9; }
+    const target = planTeamMovement(state,'home').find(p => p.playerId==='home-1')!;
+    stepGame(state,input(),frame);
+    state.players[0]!.x = 4;
+    const middle=state.players[1]!; const before={x:middle.x,y:middle.y};
+    stepGame(state,input(),frame);
+    expect(Math.atan2(middle.vy,middle.vx)).toBeCloseTo(Math.atan2(target.y-before.y,target.x-before.x));
+  });
+  it('stops settled supporting figures instead of making the whole team chase the ball', () => {
+    const state = play();
+    for (const p of state.players.filter(p => p.team === 'away')) { p.x = 14; p.y = 9; }
+    const targets = planTeamMovement(state, 'home');
+    for (const target of targets) Object.assign(state.players.find(p => p.id === target.playerId)!, {x:target.x,y:target.y});
+    stepGame(state, input(), frame);
+    for (const target of targets) {
+      const p = state.players.find(p => p.id === target.playerId)!;
+      expect(p.vx).toBe(0); expect(p.vy).toBe(0);
+    }
+  });
+});
+
+describe('tactical role identity', () => {
+  it.each(['home', 'away'] as const)('assigns one attacker, midfielder and defender to %s without changing keeper identity', team => {
+    const state = createGame();
+    expect(state.players.filter(p => p.team === team && p.role === 'outfield').map(p => p.tacticalRole))
+      .toEqual(['attacker', 'midfielder', 'defender']);
+    expect(state.players.find(p => p.team === team && p.role === 'keeper')?.tacticalRole).toBeUndefined();
   });
 });
 

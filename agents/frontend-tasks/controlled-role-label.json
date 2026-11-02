@@ -1,0 +1,15 @@
+{
+  "id": "controlled-role-label",
+  "target": "src/ui.ts",
+  "description": "Implement ONE pure frontend helper, not the game AI.",
+  "requirements": [
+    "Output exactly one exported TypeScript function controlledRoleLabel(state: GameState): string. No imports, no other functions, no markdown.",
+    "Find the player in state.players whose id equals state.controlledId. If not found return \"Player\".",
+    "If the selected player role equals \"keeper\", return \"Goalkeeper\".",
+    "For selected outfield tacticalRole \"attacker\", \"midfielder\", \"defender\", return respectively \"Attacker\", \"Midfielder\", \"Defender\".",
+    "If tacticalRole is missing or unknown return \"Outfield player\".",
+    "Do not modify state; do not perform IO, network calls, DOM changes or commands. Return a string only.",
+    "GameState type is already imported in src/ui.ts. Shape: { controlledId:string, players:Array<{id:string,role:\"outfield\"|\"keeper\",tacticalRole?:\"attacker\"|\"midfielder\"|\"defender\"}> }. Preserve existing completedPayload function; only return your NEW function as code."
+  ],
+  "acceptanceCommand": "npx vitest run src/ui.test.ts"
+}
