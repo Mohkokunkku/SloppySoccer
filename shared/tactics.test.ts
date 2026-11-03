@@ -13,6 +13,32 @@ const player = (state: GameState, id: string) => state.players.find(p => p.id ==
 const intent = (state: GameState, id: string) => planTeamMovement(state, 'home').find(p => p.playerId === id)!;
 
 describe('planTeamMovement', () => {
+  it.each(['home', 'away'] as const)('reserves the nearest %s defender for deep emergencies, not ordinary pressing', team => {
+    const state = setup(); const sign = team === 'home' ? 1 : -1;
+    const enemy = team === 'home' ? 'away' : 'home';
+    Object.assign(player(state, `${team}-0`), {x:9*sign,y:6});
+    Object.assign(player(state, `${team}-1`), {x:6*sign,y:-5});
+    Object.assign(player(state, `${team}-2`), {x:-6*sign,y:0});
+    Object.assign(player(state, `${enemy}-0`), {x:-6*sign,y:0});
+    Object.assign(state.ball, {ownerId:`${enemy}-0`,x:-6*sign,y:0});
+    expect(planTeamMovement(state, team).find(p => p.playerId === `${team}-2`)!.action).toBe('cover');
+    player(state, `${enemy}-0`).x = -12*sign; state.ball.x = -12*sign;
+    player(state, `${team}-2`).x = -11*sign;
+    expect(planTeamMovement(state, team).find(p => p.playerId === `${team}-2`)!.action).toBe('press');
+  });
+  it.each(['home', 'away'] as const)('keeps %s deep cover below midfield even with the ball far forward', team => {
+    const state = setup(); const sign = team === 'home' ? 1 : -1;
+    state.ball.ownerId = `${team}-0`; player(state, `${team}-0`).x = 12*sign;
+    const targets = planTeamMovement(state, team);
+    expect(targets.find(p => p.playerId === `${team}-2`)!.x * sign).toBeLessThanOrEqual(-8);
+    state.ball.ownerId = team === 'home' ? 'away-1' : 'home-1';
+    const enemy = player(state, state.ball.ownerId); enemy.x = -8*sign;
+    player(state, `${team}-1`).x = enemy.x;
+    const defense = planTeamMovement(state, team);
+    const defender = defense.find(p => p.playerId === `${team}-2`)!;
+    const middle = defense.find(p => p.playerId === `${team}-1`)!;
+    expect(defender.x * sign).toBeLessThanOrEqual(middle.x * sign - 2);
+  });
   it('uses one presser while midfield screens the passing lane and defense stays goal-side', () => {
     const state = setup();
     Object.assign(player(state, 'away-0'), {x:-6,y:4});

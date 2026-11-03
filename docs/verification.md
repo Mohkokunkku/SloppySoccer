@@ -1,5 +1,16 @@
 # Verification
 
+## Current international squad branch
+- `npm run check`: **188 tests across24 files passed**, strict TypeScript and frontend/backend production builds passed.
+- Complete `npm run test:e2e`: **13 Chromium checks passed**, including all earlier match/phone/persistence/role checks, actual voice playback, three real five-second goal/reset rehearsals, both concept boards, the real 3D squad shelf with working camera/focus, and A1/A3/A2 assignment in the actual match.
+- `npm audit --omit=dev`: **0 reported vulnerabilities**; `git diff --check` passed.
+- Squad desktop and phone screenshots were inspected. All three adult moulds are distinct and unclipped, including the bearded captain and headband runner; individual focus is usable on a phone.
+- The 3D artist, preview specialist and QA specialist worked in parallel under `docs/squad-contract.md`; coordinator performed the combined gates. Final independent review is recorded separately.
+- Spain's goalkeeper and Argentina keep their original figures; no simulation state or physics changes are introduced by mould selection.
+- Voice clips were generated locally with installed Windows speech voices after the configured remote speech tool timed out. Catalogue speech-skill installation did not complete. Existing local playback passed browser checks; no voice-cloning service is claimed.
+- Crowded role-label decluttering remains pending explicit approval after an execution-approval timeout; it was not attempted through another tool. Markers otherwise work and use per-mould height anchors.
+- Main's Git ref/release are not merged or activated by this feature branch. Preview background servers require manual startup and are not Windows services.
+
 ## Role-based AI branch — November 2, 2026
 - `npm run check`: **141 tests across 17 files passed**, strict TypeScript checks and frontend/backend production builds passed.
 - `npm run test:e2e`: **5 Chromium checks passed**, including selected-role switching and tooltip, WebGL lifecycle, phone overflow, full one-minute match with save-once API read-back, and the design board.

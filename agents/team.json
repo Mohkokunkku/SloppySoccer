@@ -36,5 +36,11 @@
     "model": "deepseek-r1:14b",
     "enabled": false,
     "automaticFallback": false
+  },
+  "retiredLocalFrontend": {
+    "provider": "ollama",
+    "model": "eriktonon/deepseek-v4.1-flash-1017:9b",
+    "enabled": false,
+    "automaticFallback": false
   }
 }

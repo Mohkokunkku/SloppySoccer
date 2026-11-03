@@ -1,5 +1,9 @@
 import * as THREE from 'three';
 import { FIELD, type GameState } from '../shared/types';
+import {roleMarker} from './role-marker';
+import {tacticalRoleOf} from '../shared/tactics';
+import {celebrationStyle} from './celebrations';
+import {TEAMS} from './teams';
 import { buildTabletop, cameraBounds, COLORS, createFigure, createFootball, poseFigure, shadowTexture, type FigureRig } from './scene';
 
 /** Presentation only. shared/engine.ts is the sole owner of simulation. */
@@ -15,6 +19,10 @@ export class ToyRenderer {
   private observer: ResizeObserver;
   private reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
   private lastRender = 0;
+  private motionTime=0;
+  private labels=document.createElement('div');
+  private markers=new Map<string,HTMLSpanElement>();
+  private projected=new THREE.Vector3();
 
   constructor(private host: HTMLElement, state: GameState) {
     this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false, powerPreference: 'high-performance' });
@@ -27,9 +35,11 @@ export class ToyRenderer {
     this.renderer.setClearColor(0xece8dd);
     const canvas = this.renderer.domElement;
     canvas.setAttribute('role', 'img');
-    canvas.setAttribute('aria-label', 'Sloppy Soccer tabletop pitch. You control the coral team and attack the right goal. Use WASD or arrow keys to move, Space to shoot, E to pass, Q to switch and Shift to sprint.');
+    canvas.setAttribute('aria-label', 'Sloppy Soccer tabletop pitch. You control Spain and attack the right goal. Use WASD or arrow keys to move, Space to shoot, E to pass, Q to switch and Shift to sprint.');
     canvas.tabIndex = 0;
     host.append(canvas);
+    this.labels.className='role-markers';this.labels.setAttribute('aria-label','Player tactical roles');host.append(this.labels);
+    for(const player of state.players){const marker=document.createElement('span');marker.className='role-marker '+player.team;marker.dataset.player=player.id;marker.setAttribute('role','img');marker.setAttribute('aria-label',TEAMS[player.team].name+' '+(player.role==='keeper'?'goalkeeper':tacticalRoleOf(player)));this.labels.append(marker);this.markers.set(player.id,marker);}
     this.camera.position.set(3, 34, 29); this.camera.lookAt(0, -0.2, 0);
     this.scene.add(new THREE.HemisphereLight(0xfff6df, 0xa1b09d, 2.7));
     const key = new THREE.DirectionalLight(0xfff2d8, 3.4); key.position.set(-12, 25, 10);
@@ -70,18 +80,30 @@ export class ToyRenderer {
     const bounds = cameraBounds(width / height);
     this.camera.left = -bounds.width / 2; this.camera.right = bounds.width / 2;
     this.camera.top = bounds.height / 2; this.camera.bottom = -bounds.height / 2;
-    this.camera.updateProjectionMatrix();
+    this.camera.updateProjectionMatrix();this.camera.updateMatrixWorld();
   }
 
   start(frame: (now: number) => void): void {
     this.renderer.setAnimationLoop(now => frame(now));
   }
 
-  render(state: GameState, now: number): void {
+  render(state: GameState, now: number, paused=false): void {
     const dt = Math.min(0.05, Math.max(0, (now - this.lastRender) / 1000)); this.lastRender = now;
-    state.players.forEach(player => {
+    if(!paused&&(state.phase==='playing'||state.phase==='resetting'))this.motionTime+=dt;
+    state.players.forEach((player,index) => {
       const rig = this.figures.get(player.id);
-      if (rig) poseFigure(rig, player, state.elapsed, this.reducedMotion.matches);
+      const cheer=state.phase==='goal'&&state.lastScorer===player.team?{style:celebrationStyle(state.score.home+state.score.away),seconds:5-state.phaseTimer,index:index%4}:undefined;
+      if (rig) poseFigure(rig, player, this.motionTime, this.reducedMotion.matches,cheer);
+      const marker=this.markers.get(player.id);
+      if(marker){
+        const label=roleMarker(player.role==='keeper'?'keeper':tacticalRoleOf(player)??undefined);if(marker.textContent!==label)marker.textContent=label;
+        marker.dataset.role=label;marker.classList.toggle('is-controlled',player.id===state.controlledId);
+        marker.dataset.character=typeof rig?.root.userData.characterId==='string'?rig.root.userData.characterId:'';
+        const markerHeight=typeof rig?.root.userData.markerHeight==='number'?rig.root.userData.markerHeight:2.95;
+        this.projected.set(rig?.root.position.x??player.x,(rig?.root.position.y??0.1)+markerHeight,player.y).project(this.camera);
+        const x=(this.projected.x+1)*this.host.clientWidth/2,y=(1-this.projected.y)*this.host.clientHeight/2;
+        marker.style.transform=`translate(${x}px,${y}px) translate(-50%,-50%)`;
+      }
       const shadow = this.shadows.get(player.id); shadow?.position.set(player.x, 0.061, player.y);
     });
     const controlled = state.players.find(player => player.id === state.controlledId);
@@ -106,6 +128,7 @@ export class ToyRenderer {
         materials.forEach(material => material.dispose());
       }
     });
+    this.labels.remove();this.markers.clear();
     this.renderer.dispose(); this.renderer.domElement.remove();
   }
 }

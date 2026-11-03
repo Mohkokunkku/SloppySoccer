@@ -29,3 +29,5 @@ The `role-hint` task returned a four-case TypeScript text helper using `gpt-6.1-
 5. Run the complete suite and production-browser checks before committing.
 
 The role-AI branch is isolated from `main`. A test preview uses port3001 and separate result storage; the deployed main game remains on port3000.
+
+The local Flash worker (`eriktonon/deepseek-v4.1-flash-1017:9b`) was tested and then disabled at the user's request. It is retained only as an optional helper implementation, never an automatic fallback. The active frontend worker is again Sol with low reasoning.

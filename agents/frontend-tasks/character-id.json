@@ -1,0 +1,11 @@
+{
+  "id": "character-id",
+  "target": "src/character-id.ts",
+  "description": "Implement only one tiny pure TypeScript function. Return JSON with the complete code string.",
+  "requirements": [
+    "Export function characterIdFor(team: 'home' | 'away', role: 'outfield' | 'keeper', tacticalRole: 'attacker' | 'midfielder' | 'defender' | undefined): 'A1' | 'A2' | 'A3' | null",
+    "For home outfield: attacker returns A1, midfielder returns A3, defender returns A2.",
+    "For away team, keeper role, or undefined tacticalRole, return null. Check away/keeper first.",
+    "No imports, tools, side effects, file changes, markdown, other exports or additional functions."
+  ]
+}

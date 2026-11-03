@@ -43,8 +43,9 @@ export function planTeamMovement(state: GameState, team: Team): TacticalIntent[]
   const pressureCost = (p: Player) => Math.hypot(p.x - origin.x, p.y - origin.y)
     + (tacticalRoleOf(p) === 'defender' && ballA > -5 ? 4 : tacticalRoleOf(p) === 'midfielder' ? 0.5 : 0);
   const presser = !ownBall && owner?.role !== 'keeper'
-    ? [...figures].sort((a, b) => pressureCost(a) - pressureCost(b) || a.id.localeCompare(b.id))[0] : undefined;
-  return figures.map(p => {
+    ? figures.filter(p => tacticalRoleOf(p) !== 'defender' || (ballA < -10 && Math.abs(origin.y) < 6))
+      .sort((a, b) => pressureCost(a) - pressureCost(b) || a.id.localeCompare(b.id))[0] : undefined;
+  const intents = figures.map(p => {
     const role = tacticalRoleOf(p);
     let x = p.x, y = p.y;
     let action: TacticalIntent['action'] = 'hold';
@@ -82,6 +83,16 @@ export function planTeamMovement(state: GameState, team: Team): TacticalIntent[]
     }
     return {playerId:p.id,x:clamp(x,-limitX,limitX),y:clamp(y,-limitY,limitY),action,arrivalRadius};
   });
+  // Keep the back figure visibly below the other autonomous role targets.
+  // A manually driven teammate is deliberately not a formation constraint.
+  for (const target of intents) {
+    const p = figures.find(p => p.id === target.playerId)!;
+    if (tacticalRoleOf(p) !== 'defender' || target.action === 'press') continue;
+    const upperDepth = Math.min(-8, ...intents.filter(other => other !== target)
+      .map(other => other.x * sign - 3));
+    target.x = clamp(Math.min(target.x * sign, upperDepth), -limitX, limitX) * sign;
+  }
+  return intents;
 }
 
 export function tacticalRoleOf(player: Player): TacticalRole | null {

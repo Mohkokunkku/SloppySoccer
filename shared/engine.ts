@@ -18,6 +18,13 @@ function runtime(state: GameState): Runtime {
   return value;
 }
 
+export function kickoffPosition(team: Team, slot: number, receivingTeam: Team): {x:number;y:number} {
+  return {
+    x: (slot === 3 ? -14.6 : slot === 0 ? (team === receivingTeam ? -1 : -3) : slot === 1 ? -5 : -10) * direction(team),
+    y: slot === 1 ? -5 : slot === 2 ? 5 : 0,
+  };
+}
+
 export function createGame(config: Partial<MatchConfig> = {}): GameState {
   const players: Player[] = [];
   for (const team of ['home', 'away'] as const) {
@@ -25,8 +32,7 @@ export function createGame(config: Partial<MatchConfig> = {}): GameState {
     for (let i = 0; i < 4; i++) players.push({
       id: `${team}-${i}`, team, role: i === 3 ? 'keeper' : 'outfield',
       ...(i < 3 ? { tacticalRole: (['attacker', 'midfielder', 'defender'] as const)[i] } : {}),
-      x: (i === 3 ? -14.6 : i === 0 ? (team === 'home' ? -1 : -5) : -6) * sign,
-      y: i === 1 ? -5 : i === 2 ? 5 : 0,
+      ...kickoffPosition(team, i, 'home'),
       vx: 0, vy: 0, facing: sign === 1 ? 0 : Math.PI, stamina: 1,
     });
   }
@@ -100,10 +106,8 @@ function pass(state: GameState, player: Player, x: number, y: number): void {
 }
 function kickoff(state: GameState, team: Team): void {
   for (const p of state.players) {
-    const slot = Number(p.id.split('-')[1]);
     const sign = direction(p.team);
-    p.x = (p.role === 'keeper' ? -14.6 : slot === 0 ? (p.team === team ? -1 : -5) : -6) * sign;
-    p.y = slot === 1 ? -5 : slot === 2 ? 5 : 0;
+    // Positioning has already completed through bounded resetting movement.
     p.vx = p.vy = 0; p.facing = sign === 1 ? 0 : Math.PI;
     p.stamina = Math.max(p.stamina, 0.65);
   }
@@ -175,8 +179,10 @@ function updateAIAction(state: GameState, dt: number): void {
     shoot(state, owner, sign, Math.sin(state.elapsed) * 0.25);
     // Release from the keeper's hands, above the outfield pickup band. A low
     // foot-level clearance can be caught in this same step by a crowding striker.
+    state.ball.vx *= 13.8 / 22;
+    state.ball.vy *= 13.8 / 22;
     state.ball.z = 1.1;
-    state.ball.vz = 5.4;
+    state.ball.vz = 4;
     meta.aiCooldowns.set(owner.id, 0.8);
   } else if (16 - owner.x * sign < 13) {
     shoot(state, owner, sign * 16 - owner.x, Math.sin(state.elapsed * 1.7) * 2 - owner.y);
@@ -192,7 +198,33 @@ export function stepGame(state: GameState, input: InputState, dt: number, config
     const meta = runtime(state);
     meta.shoot = !!input.shoot; meta.pass = !!input.pass; meta.switchPlayer = !!input.switchPlayer;
     state.phaseTimer = Math.max(0, state.phaseTimer - Math.min(dt, 0.1));
-    if (state.phaseTimer < 1e-9) kickoff(state, state.lastScorer === 'home' ? 'away' : 'home');
+    if (state.phaseTimer < 1e-9) {
+      state.phase = 'resetting'; state.phaseTimer = 0;
+      Object.assign(state.ball, {x:0,y:0,vx:0,vy:0,z:0,vz:0,ownerId:null});
+    }
+    return;
+  }
+  if (state.phase === 'resetting') {
+    const meta = runtime(state);
+    meta.shoot = !!input.shoot; meta.pass = !!input.pass; meta.switchPlayer = !!input.switchPlayer;
+    const team = state.lastScorer === 'home' ? 'away' : 'home';
+    const resetDt = Math.min(dt, 0.1);
+    let arrived = true;
+    Object.assign(state.ball, {x:0,y:0,vx:0,vy:0,z:0,vz:0,ownerId:null});
+    for (const p of state.players) {
+      const target = kickoffPosition(p.team, Number(p.id.split('-')[1]), team);
+      const dx = target.x - p.x, dy = target.y - p.y;
+      const distance = Math.hypot(dx, dy);
+      if (distance > 7 * resetDt) {
+        move(p, dx / distance, dy / distance, 7, resetDt);
+        arrived = false;
+      } else {
+        p.vx = dx / resetDt; p.vy = dy / resetDt;
+        if (distance > 0) p.facing = Math.atan2(dy, dx);
+        p.x = target.x; p.y = target.y;
+      }
+    }
+    if (arrived) kickoff(state, team);
     return;
   }
   dt = Math.min(dt, 0.1, state.timeRemaining);
@@ -261,7 +293,7 @@ export function stepGame(state: GameState, input: InputState, dt: number, config
     const team: Team = state.ball.x > 0 ? 'home' : 'away';
     state.score[team]++;
     state.lastScorer = team;
-    state.phase = 'goal'; state.phaseTimer = 1.5;
+    state.phase = 'goal'; state.phaseTimer = 5;
     state.ball.ownerId = null;
     state.ball.vx = state.ball.vy = state.ball.vz = 0;
     for (const p of state.players) p.vx = p.vy = 0;

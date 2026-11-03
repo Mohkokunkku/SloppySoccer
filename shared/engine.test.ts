@@ -52,7 +52,8 @@ describe('crowded goalkeeper possession', () => {
       progress = Math.max(progress, (state.ball.x - keeper.x) * sign);
     }
     expect(releaseAfter).toBeLessThan(1);
-    expect(progress).toBeGreaterThan(10);
+    // A gentler clearance still travels well beyond the own deep box.
+    expect(progress).toBeGreaterThan(8);
     expect(state.phase).toBe('playing');
   });
   it.each(['home', 'away'] as const)('clears over an attacker crowding the %s keeper instead of being recaptured immediately', team => {
@@ -60,9 +61,14 @@ describe('crowded goalkeeper possession', () => {
     stepGame(state, input(), frame);
     expect(state.ball.ownerId).toBeNull();
     expect(state.ball.z).toBeGreaterThan(0.65);
-    expect(state.ball.vx * sign).toBeGreaterThan(15);
+    expect(state.ball.vx * sign).toBeGreaterThan(13);
+    expect(state.ball.vx * sign).toBeLessThan(14);
+    expect(state.ball.vz).toBeGreaterThan(3.5);
+    expect(state.ball.vz).toBeLessThan(4);
+    expect(state.ball.z).toBeGreaterThan(1.1);
     advance(state, 0.4);
-    expect((state.ball.x + sign * 14.6) * sign).toBeGreaterThan(6);
+    // Clear the deep box (own x=-10), not the previous near-half-pitch blast.
+    expect((state.ball.x + sign * 14.6) * sign).toBeGreaterThan(5);
     expect(state.phase).toBe('playing');
   });
 });
@@ -102,22 +108,88 @@ describe('computer figures', () => {
 });
 
 describe('goals and boards', () => {
-  it('pauses the clock for celebration and resets a playable kickoff for the conceding team', () => {
-    for (const sign of [-1, 1]) {
-      const state = play(); isolate(state);
-      Object.assign(state.ball, { x: sign * 16.4, y: 0, vx: sign * 10, vy: 0 });
-      stepGame(state, input(), frame);
-      const time = state.timeRemaining;
-      advance(state, 0.5, input({ moveX: 1, shoot: true }));
-      expect(state.phase).toBe('goal');
-      expect(state.timeRemaining).toBe(time);
-      advance(state, 1.05);
-      expect(state.phase).toBe('playing');
-      expect(state.ball.ownerId).toBe(sign === 1 ? 'away-0' : 'home-0');
-      expect(Math.abs(state.ball.x)).toBeLessThan(2);
-      expect(state.score[sign === 1 ? 'home' : 'away']).toBe(1);
-      expect(state.players.find(p => p.id === state.controlledId)?.team).toBe('home');
+  it.each([-1, 1])('freezes figures, ball, input and clock for five full seconds after a %s goal', sign => {
+    const state = play(); isolate(state);
+    Object.assign(state.ball, { x: sign * 16.4, y: 0, vx: sign * 10, vy: 0 });
+    stepGame(state, input(), frame);
+    expect(state.phase).toBe('goal'); expect(state.phaseTimer).toBe(5);
+    const frozen = structuredClone(state);
+    const held = input({ moveX: 1, shoot: true, pass: true, switchPlayer: true });
+    advance(state, 4.9, held);
+    expect(state.phase).toBe('goal'); expect(state.phaseTimer).toBeCloseTo(0.1);
+    expect(state.players).toEqual(frozen.players); expect(state.ball).toEqual(frozen.ball);
+    expect(state.timeRemaining).toBe(frozen.timeRemaining); expect(state.elapsed).toBe(frozen.elapsed);
+    expect(state.score).toEqual(frozen.score); expect(state.controlledId).toBe(frozen.controlledId);
+    advance(state, 0.1, held);
+    expect(state.phase).toBe('resetting');
+    expect(state.players).toEqual(frozen.players);
+    expect(state.ball).toEqual({x:0,y:0,vx:0,vy:0,z:0,vz:0,ownerId:null});
+  });
+  it.each([-1, 1])('walks every figure to the actual conceding-team kickoff after a %s goal', sign => {
+    const state = play(); isolate(state);
+    // Longest legal pitch diagonals exercise a finite, bounded return.
+    for (const p of state.players) { p.x = p.team === 'home' ? 15 : -15; p.y = -9; }
+    Object.assign(state.ball, {x:sign*16.4,y:0,vx:sign*10,vy:0});
+    stepGame(state, input(), frame); advance(state, 5);
+    const team = sign === 1 ? 'away' : 'home';
+    const targets = state.players.map(p => {
+      const slot = Number(p.id.split('-')[1]), dir = p.team === 'home' ? 1 : -1;
+      return {x:(slot===3?-14.6:slot===0?(p.team===team?-1:-3):slot===1?-5:-10)*dir,
+        y:slot===1?-5:slot===2?5:0};
+    });
+    const initial = state.players.map(p => ({x:p.x,y:p.y}));
+    const time = state.timeRemaining, elapsed = state.elapsed, score = {...state.score};
+    const held = input({shoot:true,pass:true,switchPlayer:true,moveX:1,sprint:true});
+    let frames = 0;
+    while (state.phase === 'resetting' && frames < 360) {
+      const before = state.players.map(p => ({x:p.x,y:p.y}));
+      stepGame(state, held, frame); frames++;
+      for (const [i,p] of state.players.entries()) {
+        expect(Math.hypot(p.x-before[i]!.x,p.y-before[i]!.y)).toBeLessThanOrEqual(7*frame+1e-9);
+        const t = targets[i]!;
+        expect(Math.hypot(p.x-t.x,p.y-t.y)).toBeLessThanOrEqual(Math.hypot(before[i]!.x-t.x,before[i]!.y-t.y)+1e-9);
+      }
+      expect(state.timeRemaining).toBe(time); expect(state.elapsed).toBe(elapsed); expect(state.score).toEqual(score);
+      if (state.phase === 'resetting') expect(state.ball).toEqual({x:0,y:0,vx:0,vy:0,z:0,vz:0,ownerId:null});
+      if (frames === 30) {
+        expect(state.phase).toBe('resetting');
+        expect(state.players[0]!.x).toBeLessThan(initial[0]!.x);
+        expect(state.players[0]!.x).toBeGreaterThan(targets[0]!.x);
+      }
     }
+    expect(state.phase).toBe('playing'); expect(frames).toBeLessThan(360);
+    expect(state.ball.ownerId).toBe(`${team}-0`); expect(state.controlledId).toBe('home-0');
+    state.players.forEach((p,i) => { expect(p.x).toBeCloseTo(targets[i]!.x); expect(p.y).toBeCloseTo(targets[i]!.y); });
+    // Held actions must not become fresh edges at the transition.
+    stepGame(state, {...held,moveX:0}, frame);
+    expect(state.controlledId).toBe('home-0'); expect(state.ball.ownerId).toBe(`${team}-0`);
+    expect(state.timeRemaining).toBeLessThan(time);
+  });
+  it('repeats scoring trajectories and resumes each kickoff without counting reset time', () => {
+    const state = play();
+    for (const [index, sign] of [1,-1,1].entries()) {
+      isolate(state);
+      Object.assign(state.ball, {x:sign*15.4,y:0,vx:sign*20,vy:0,z:0,vz:0});
+      stepGame(state, input(), frame); expect(state.phase).toBe('playing');
+      for (let i=0; i<5 && state.phase==='playing'; i++) stepGame(state,input(),frame);
+      expect(state.phase).toBe('goal'); expect(state.phaseTimer).toBe(5);
+      expect(state.score.home+state.score.away).toBe(index+1);
+      const time=state.timeRemaining, elapsed=state.elapsed;
+      advance(state,5); expect(state.phase).toBe('resetting');
+      for(let i=0;i<360 && state.phase==='resetting';i++) stepGame(state,input(),frame);
+      expect(state.phase).toBe('playing'); expect(state.ball.ownerId).toBe(sign===1?'away-0':'home-0');
+      expect(state.timeRemaining).toBe(time); expect(state.elapsed).toBe(elapsed);
+    }
+    expect(state.score).toEqual({home:2,away:1});
+  });
+  it('finishes a last-tick goal normally instead of starting a frozen reset', () => {
+    const state=play(); isolate(state); state.timeRemaining=frame;
+    Object.assign(state.ball,{x:16.2,y:0,vx:20,vy:0});
+    stepGame(state,input(),frame);
+    expect(state.score.home).toBe(1); expect(state.phase).toBe('finished');
+    expect(state.timeRemaining).toBe(0);
+    const final=structuredClone(state); advance(state,12,input({shoot:true,moveX:1}));
+    expect(state).toEqual(final);
   });
   it('rebounds end boards outside the mouth, posts and side walls without scoring', () => {
     for (const sign of [-1, 1]) {
@@ -314,7 +386,8 @@ describe('safety and keeper saves', () => {
     expect(state.score).toEqual({ home: 0, away: 0 });
     stepGame(state, input(), frame);
     expect(state.ball.ownerId).toBeNull();
-    expect(state.ball.vx * sign).toBeGreaterThan(15);
+    expect(state.ball.vx * sign).toBeGreaterThan(13);
+    expect(state.ball.vx * sign).toBeLessThan(14);
   });
   it('ignores invalid timestep and clamps huge input and timestep without NaN', () => {
     const state = play(); const before = structuredClone(state);
@@ -335,6 +408,31 @@ describe('safety and keeper saves', () => {
 });
 
 describe('role-aware AI movement', () => {
+  it.each(['home','away'] as const)('makes the nearest %s defender retreat beneath a midfield presser in real play', team => {
+    const state=play(); const sign=team==='home'?1:-1, enemy=team==='home'?'away':'home';
+    state.controlledId=`${enemy}-0`;
+    const defender=state.players.find(p=>p.id===`${team}-2`)!;
+    const middle=state.players.find(p=>p.id===`${team}-1`)!;
+    Object.assign(state.players.find(p=>p.id===`${team}-0`)!,{x:9*sign,y:6});
+    Object.assign(middle,{x:6*sign,y:-5}); Object.assign(defender,{x:-6*sign,y:0});
+    Object.assign(state.players.find(p=>p.id===state.controlledId)!,{x:-6*sign,y:0,facing:sign===1?Math.PI:0});
+    state.ball.ownerId=state.controlledId;
+    advance(state,0.5);
+    expect(defender.x*sign).toBeLessThan(-7.5);
+    expect(defender.x*sign).toBeLessThan(middle.x*sign-3);
+  });
+  it.each(['home','away'] as const)('keeps %s deep defense visible below the midfield with a forward carrier', team => {
+    const state=play(); const sign=team==='home'?1:-1;
+    state.controlledId=`${team}-0`; state.ball.ownerId=state.controlledId;
+    const attacker=state.players.find(p=>p.id===state.controlledId)!; attacker.x=12*sign;
+    for(const p of state.players.filter(p=>p.team!==team)){p.x=14*sign;p.y=9;}
+    const defender=state.players.find(p=>p.id===`${team}-2`)!;
+    const middle=state.players.find(p=>p.id===`${team}-1`)!;
+    advance(state,2);
+    expect(defender.x*sign).toBeLessThan(-7.4);
+    expect(middle.x*sign-defender.x*sign).toBeGreaterThan(5);
+    expect(attacker.x).toBe(12*sign);
+  });
   it('keeps the defender underneath the midfield support while the team attacks', () => {
     const state=play(); state.players[0]!.x=5;
     for(const p of state.players.filter(p=>p.team==='away')) {p.x=14;p.y=9;}
@@ -375,6 +473,13 @@ describe('role-aware AI movement', () => {
 });
 
 describe('tactical role identity', () => {
+  it.each(['home', 'away'] as const)('starts %s with visibly distinct attacker, midfield and deep defense', team => {
+    const state = createGame(); const sign = team === 'home' ? 1 : -1;
+    const [attacker, middle, defender] = state.players.filter(p => p.team === team);
+    expect(defender!.x * sign).toBe(-10);
+    expect(middle!.x * sign).toBe(-5);
+    expect(attacker!.x * sign).toBeGreaterThan(middle!.x * sign);
+  });
   it.each(['home', 'away'] as const)('assigns one attacker, midfielder and defender to %s without changing keeper identity', team => {
     const state = createGame();
     expect(state.players.filter(p => p.team === team && p.role === 'outfield').map(p => p.tacticalRole))

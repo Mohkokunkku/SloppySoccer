@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#fff8e9" />
+    <meta name="description" content="Meet Spain’s three original Sloppy Soccer toy footballers. Explore the actual game figures in 3D." />
+    <title>The Spain squad · Sloppy Soccer</title>
+    <link rel="stylesheet" href="/src/squad-showcase.css" />
+    <script type="module" src="/src/squad-showcase.ts"></script>
+  </head>
+  <body>
+    <a class="skip-link" href="#squad-heading">Skip to the squad</a>
+    <div class="workshop">
+      <header class="masthead">
+        <a class="wordmark" href="/" aria-label="Sloppy Soccer home">SLOPPY<span>SOCCER.</span></a>
+        <p class="masthead-note">Toybox International<br />The player shelf</p>
+        <a class="back-link" href="/">Back to the game</a>
+      </header>
+      <main>
+        <section class="introduction" aria-labelledby="squad-heading">
+          <div>
+            <p class="collection"><span class="spain-flag" aria-hidden="true"></span> Spain / Outfield collection</p>
+            <h1 id="squad-heading" tabindex="-1">Three moulds.<br />One team.</h1>
+          </div>
+          <p class="intro-copy">Meet the athlete, the captain and the runner. Three original characters in Spain’s red and gold, made from the same glossy toybox DNA.</p>
+        </section>
+        <section class="squad-display" aria-label="Interactive 3D squad shelf">
+          <div class="display-toolbar">
+            <fieldset class="view-controls">
+              <legend>Turn the figures</legend>
+              <div class="view-buttons">
+                <button type="button" data-view="front" aria-pressed="false" aria-controls="squad-canvas">Front</button>
+                <button type="button" data-view="threequarter" aria-pressed="true" aria-controls="squad-canvas">Three-quarter</button>
+                <button type="button" data-view="back" aria-pressed="false" aria-controls="squad-canvas">Back</button>
+              </div>
+            </fieldset>
+            <div class="focus-control">
+              <label for="showcase-focus">Take a closer look</label>
+              <select id="showcase-focus" aria-controls="squad-canvas squad-cards" aria-describedby="focus-hint">
+                <option value="all">All three players</option>
+                <option value="A1">A1 · Matchday Athlete</option>
+                <option value="A2">A2 · Power Captain</option>
+                <option value="A3">A3 · Midfield Runner</option>
+              </select>
+            </div>
+          </div>
+          <div class="shelf-window">
+            <div class="shelf-caption" aria-hidden="true"><span>ESP</span><span>Red shirt. Gold trim. Black boots.</span></div>
+            <div id="squad-canvas" aria-busy="true"></div>
+            <p id="squad-status" role="status" aria-live="polite">Preparing the 3D squad…</p>
+          </div>
+          <p id="focus-hint" class="display-hint">Choose a player for a full-height close-up. View controls turn the actual game figures.</p>
+        </section>
+        <section id="squad-cards" class="squad-cards" aria-label="Meet the three players">
+          <article class="squad-card" data-character="A1">
+            <div class="card-top"><span class="character-id">A1</span><span class="player-role">Attacker</span></div>
+            <h2>Matchday Athlete</h2>
+            <p>Lean build. Quick feet. A clean-shaven face and cropped fade, ready to lead the attack.</p>
+            <button type="button" data-focus="A1" aria-controls="squad-canvas" aria-pressed="false">Inspect A1<span aria-hidden="true">↗</span></button>
+          </article>
+          <article class="squad-card" data-character="A2">
+            <div class="card-top"><span class="character-id">A2</span><span class="player-role">Defender</span></div>
+            <h2>Power Captain</h2>
+            <p>Broad shoulders. Planted stance. A square jaw and neat beard bring a steady presence at the back.</p>
+            <button type="button" data-focus="A2" aria-controls="squad-canvas" aria-pressed="false">Inspect A2<span aria-hidden="true">↗</span></button>
+          </article>
+          <article class="squad-card" data-character="A3">
+            <div class="card-top"><span class="character-id">A3</span><span class="player-role">Midfielder</span></div>
+            <h2>Midfield Runner</h2>
+            <p>Compact and athletic. Textured hair and a white sports headband set the runner apart in midfield.</p>
+            <button type="button" data-focus="A3" aria-controls="squad-canvas" aria-pressed="false">Inspect A3<span aria-hidden="true">↗</span></button>
+          </article>
+        </section>
+      </main>
+      <footer class="page-footer"><p>Original toy characters. No real-player likenesses.</p><p>The goalkeeper and Argentina squad stay unchanged.</p></footer>
+    </div>
+    <noscript><p class="no-script">Enable JavaScript to view the 3D figures. Player names and roles are listed above.</p></noscript>
+  </body>
+</html>

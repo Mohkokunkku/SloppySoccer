@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Sloppy Soccer — The player shelf / A · B · C</title>
+<link rel="stylesheet" href="./toybox-concepts.css">
+</head>
+<body>
+<svg class="svg-library" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><defs>
+<linearGradient id="plastic" x1="0" x2="1"><stop stop-color="#fff" stop-opacity=".25"/><stop offset=".4" stop-color="#fff" stop-opacity="0"/><stop offset="1" stop-color="#17221c" stop-opacity=".22"/></linearGradient>
+<linearGradient id="skin-light" x1="0" x2="1"><stop stop-color="#fff" stop-opacity=".22"/><stop offset="1" stop-color="#57351f" stop-opacity=".14"/></linearGradient>
+<linearGradient id="boot" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#424641"/><stop offset=".5" stop-color="#202723"/><stop offset="1" stop-color="#101612"/></linearGradient>
+<pattern id="grain" width="35" height="60" patternUnits="userSpaceOnUse"><path d="M0 4Q25 14 35 7M0 21Q15 10 35 19M0 38Q22 49 35 39M0 56Q12 44 35 53" fill="none" stroke="#815a31" stroke-width=".9" opacity=".17"/></pattern>
+<pattern id="lattice" width="13" height="13" patternUnits="userSpaceOnUse"><path d="M0 0H13V13" fill="none" stroke="#fffaf0" stroke-width="2"/></pattern>
+<symbol id="classic" viewBox="0 0 200 300">
+<ellipse cx="100" cy="286" rx="64" ry="9" fill="#63523b" opacity=".15"/>
+<path class="skin" d="M71 206L92 207 88 263 67 263ZM110 207H132L137 264H115Z"/>
+<path class="sock" d="M68 237L89 239 87 267 65 267ZM114 239L135 237 139 266 116 269Z"/>
+<path class="trim" d="M68 237L89 239 89 243 68 242ZM114 239L135 237 136 242 115 244Z"/>
+<path d="M65 260Q76 265 87 260L89 278Q86 287 56 286L53 279Z" fill="url(#boot)"/><path d="M115 261Q128 263 138 259L146 276Q149 287 121 287L115 281Z" fill="url(#boot)"/>
+<path d="M57 279L84 280M122 279L140 276" stroke="#ffffff36" stroke-width="2"/>
+<path class="shorts" d="M64 166H137L139 214Q122 220 108 215L101 190 94 216Q78 219 61 213Z"/><path class="seam" d="M101 178V192M68 194L65 208M133 193L135 208"/>
+<path class="skin" d="M49 103L32 122 24 107Q19 98 13 103 8 107 15 118L30 145Q35 151 43 143L64 122ZM143 104L170 122 178 143Q183 155 191 150 197 146 191 137L185 116 153 91Z"/>
+<path class="kit" d="M76 82Q61 82 49 93L38 110 58 128 69 115 65 170Q99 182 136 170L133 116 149 127 165 106 147 91Q132 81 122 82Z"/>
+<path class="stripes" d="M75 87H86V172H75ZM98 87H109V176H98ZM122 87H131V172H122Z" fill="#8fcbe7"/>
+<path class="trim" d="M39 108L58 124 54 130 35 113ZM149 120L163 101 168 106 153 127Z"/>
+<path class="skin" d="M88 64H113L117 86 101 104 83 85Z"/><path class="trim" d="M83 81L101 98 118 81 123 87 101 109 78 88Z"/>
+<path d="M76 83Q63 83 49 94L39 109 58 127 68 117 65 170Q99 182 136 170L133 117 149 127 165 106 147 91Q132 81 122 82L117 86 101 104 83 85Z" fill="url(#plastic)"/>
+<path class="seam" d="M72 122L70 154M130 125L132 152M80 163Q98 169 121 163"/>
+<text x="100" y="145" class="number">9</text>
+<ellipse cx="78" cy="46" rx="5" ry="9" class="skin"/><ellipse cx="121" cy="46" rx="5" ry="9" class="skin"/>
+<path class="skin" d="M79 31Q80 11 100 12 121 13 121 32L118 60Q113 77 101 79 87 76 81 60Z"/><path d="M79 31Q80 11 100 12 121 13 121 32L118 60Q113 77 101 79 87 76 81 60Z" fill="url(#skin-light)"/>
+<path class="hair" d="M79 43L76 29Q75 9 97 5 120 2 125 23L121 45 116 29Q94 32 83 24Z"/>
+<path d="M82 23L104 10M88 25L114 12M96 25L120 17M104 25L122 21" fill="none" stroke="#ffffff28" stroke-width="2"/>
+<path class="face" d="M86 43L94 42M106 42L114 44M98 48L96 56 101 57M95 66Q101 68 107 65"/><g fill="#372e27"><circle cx="91" cy="48" r="1.6"/><circle cx="110" cy="48" r="1.6"/></g>
+<path class="hand" d="M21 108Q17 96 12 100 5 104 14 117L20 123 28 116ZM177 140Q174 151 183 155 193 156 195 147L189 137Z"/>
+</symbol>
+<symbol id="wooden" viewBox="0 0 200 300">
+<ellipse cx="100" cy="283" rx="69" ry="10" fill="#63523b" opacity=".16"/>
+<rect x="49" y="267" width="105" height="17" rx="8" fill="#ac7b46"/><ellipse cx="101" cy="267" rx="52" ry="10" fill="#d8b47e"/><ellipse cx="101" cy="267" rx="52" ry="10" fill="url(#grain)"/>
+<rect class="sock" x="64" y="210" width="28" height="49" rx="7"/><rect class="sock" x="110" y="210" width="28" height="49" rx="7"/><path class="trim" d="M64 217H92V224H64ZM110 217H138V224H110Z"/>
+<rect x="55" y="246" width="40" height="23" rx="7" fill="#303a31"/><rect x="107" y="246" width="40" height="23" rx="7" fill="#303a31"/>
+<path class="shorts" d="M58 173H143V217Q125 224 106 215V197H95V215Q76 225 58 217Z"/>
+<rect x="36" y="107" width="30" height="80" rx="13" class="kit" transform="rotate(13 50 115)"/><rect x="136" y="107" width="30" height="80" rx="13" class="kit" transform="rotate(-13 150 115)"/>
+<circle cx="50" cy="116" r="10" fill="#d0aa75"/><circle cx="150" cy="116" r="10" fill="#d0aa75"/><circle cx="50" cy="116" r="3" fill="#896637"/><circle cx="150" cy="116" r="3" fill="#896637"/>
+<circle cx="35" cy="182" r="13" class="hand"/><circle cx="166" cy="182" r="13" class="hand"/>
+<path class="kit" d="M68 94Q100 84 132 94L145 173Q102 189 56 173Z"/>
+<path class="stripes" d="M75 95H85V180L71 177ZM96 90H108V184H96ZM120 94H130L135 177 121 181Z" fill="#8fcbe7"/>
+<path d="M68 94Q100 84 132 94L145 173Q102 189 56 173Z" fill="url(#grain)"/>
+<ellipse cx="100" cy="94" rx="30" ry="9" class="trim"/><ellipse cx="100" cy="92" rx="19" ry="6" fill="#c89a60"/><text x="100" y="153" class="number">9</text>
+<path d="M130 100L140 170" stroke="#fff" stroke-opacity=".16" stroke-width="5"/>
+<path fill="#dab987" d="M75 40Q100 29 126 40V73Q123 91 101 92 77 90 75 73Z"/><ellipse cx="100" cy="40" rx="25" ry="12" fill="#e7c99c"/>
+<path d="M75 40Q100 29 126 40V73Q123 91 101 92 77 90 75 73Z" fill="url(#grain)"/>
+<path class="hair" d="M75 51V37Q77 20 100 20 125 20 127 38V52L118 42Q102 48 83 40Z"/><ellipse cx="100" cy="32" rx="21" ry="8" fill="#ffffff0d"/>
+<g fill="#493d2c"><circle cx="89" cy="62" r="2.4"/><circle cx="111" cy="62" r="2.4"/></g><path class="face" d="M94 76Q100 79 106 76"/>
+<path d="M61 180Q100 193 140 179M64 213L90 213M112 213L135 213" fill="none" stroke="#222e26" opacity=".2" stroke-width="2"/>
+</symbol>
+<symbol id="vinyl" viewBox="0 0 200 300">
+<ellipse cx="100" cy="283" rx="68" ry="10" fill="#63523b" opacity=".15"/>
+<path class="sock" d="M64 229H89V266H64ZM112 229H138V266H112Z"/><path class="trim" d="M64 236H89V242H64ZM112 236H138V242H112Z"/>
+<path d="M64 258Q82 253 91 264L92 280Q69 288 48 280V271Q49 262 64 258ZM113 264Q123 254 139 259 154 261 155 272V281Q133 286 110 281Z" fill="url(#boot)"/>
+<path class="shorts" d="M60 205H141V237Q123 243 107 238L101 221 95 238Q76 243 59 236Z"/>
+<path class="kit" d="M65 137Q49 135 42 152L28 189Q23 201 35 205L53 203 69 168ZM135 137Q151 135 158 152L173 189Q178 202 164 205L146 203 131 168Z"/>
+<ellipse cx="36" cy="202" rx="14" ry="14" class="hand"/><ellipse cx="164" cy="202" rx="14" ry="14" class="hand"/>
+<path class="kit" d="M74 132Q100 126 127 133L142 198Q143 216 101 218 59 216 59 199Z"/>
+<path class="stripes" d="M77 136H87V215L72 211ZM96 133H107V218H96ZM119 136H127L134 211 119 215Z" fill="#8fcbe7"/>
+<path d="M74 132Q100 126 127 133L142 198Q143 216 101 218 59 216 59 199Z" fill="url(#plastic)"/>
+<ellipse cx="100" cy="134" rx="25" ry="9" class="trim"/><ellipse cx="100" cy="131" rx="15" ry="7" class="skin"/><text x="100" y="185" class="number">9</text>
+<ellipse cx="48" cy="78" rx="10" ry="14" class="skin"/><ellipse cx="152" cy="78" rx="10" ry="14" class="skin"/>
+<path class="skin" d="M48 54Q48 15 100 15 153 15 153 54V89Q151 129 100 131 49 129 48 89Z"/>
+<path d="M48 54Q48 15 100 15 153 15 153 54V89Q151 129 100 131 49 129 48 89Z" fill="url(#skin-light)"/>
+<path class="hair" d="M48 77Q30 37 57 16 81-3 112 8 153 7 160 43L152 80 139 53Q120 61 103 41 81 60 60 49Z"/>
+<path d="M55 34Q66 12 91 16" stroke="#fff" stroke-width="6" opacity=".1" fill="none" stroke-linecap="round"/>
+<g fill="#42372c"><ellipse cx="76" cy="82" rx="4" ry="5"/><ellipse cx="124" cy="82" rx="4" ry="5"/></g>
+<path d="M96 88Q100 83 104 88L103 95H97Z" fill="#915f3b" opacity=".33"/><path class="face" d="M90 109Q100 113 110 109"/>
+<ellipse cx="65" cy="98" rx="8" ry="4" fill="#d9836d" opacity=".23"/><ellipse cx="136" cy="98" rx="8" ry="4" fill="#d9836d" opacity=".23"/>
+</symbol>
+<symbol id="goal" viewBox="0 0 160 110"><path d="M14 14H145V98H14Z" fill="url(#lattice)"/><path d="M14 98V14H145V98" fill="none" stroke="#fffdf1" stroke-width="6" stroke-linejoin="round"/><path d="M14 14L2 26V107L14 98M145 14L158 26V107L145 98M2 107H158" fill="none" stroke="#e0dccb" stroke-width="3"/></symbol>
+</defs></svg>
+<header><div class="brand" aria-label="Sloppy Soccer">SLOPPY<span>SOCCER.</span></div><div class="edition">The player shelf / design study 01<br>Spain × Argentina · three directions</div></header>
+<main>
+<section class="intro" aria-labelledby="title"><div><p class="eyebrow">Toybox international / compare A · B · C</p><h1>Same match.<br>Three kinds of <em>toy.</em></h1></div><p class="intro-note">Choose the silhouette, not just the shirt.<br>All three include <strong>Spain, Argentina and keepers.</strong> These are original concept illustrations; nothing here changes the game.</p></section>
+<div class="comparison" aria-label="Three player design options">
+<article class="concept" id="option-a" aria-labelledby="name-a">
+<div class="box-top"><div class="model-line"><span class="letter">A</span><span class="material">Injection-moulded plastic</span></div><h2 id="name-a">Touchline Classic</h2><p class="subhead">The reference, brought back to the table.</p></div>
+<div class="figure-window"><span class="front">FRONT / MATCHED DISPLAY HEIGHT</span><svg class="lineup" viewBox="0 0 420 365" role="img" aria-label="Classic slim moulded players: Spain red and gold; Argentina sky-blue stripes"><use href="#classic" x="18" y="39" width="185" height="278" class="spain"/><use href="#classic" x="216" y="39" width="185" height="278" class="argentina"/><text x="110" y="342" text-anchor="middle">SPAIN / RED + GOLD</text><text x="307" y="342" text-anchor="middle">ARG / SKY + WHITE</text></svg></div>
+<div class="caption"><p><strong>Lean, familiar, lightly glossy.</strong> Combed hair, shaped limbs, bent arms and proper black boots keep the photographed toy recognisable.</p></div>
+<div class="detail-row"><div class="detail"><h3>Keeper / glove finish</h3><div class="keepers"><div class="keeper"><svg class="esp-keeper" aria-label="Spain classic keeper in pine green"><use href="#classic"/></svg>ESP / PINE</div><div class="keeper"><svg class="arg-keeper" aria-label="Argentina classic keeper in amber"><use href="#classic"/></svg>ARG / AMBER</div></div></div><div class="detail"><h3>Small-scale read</h3><div class="tiny-pitch"><svg class="spain" aria-label="Classic Spain miniature"><use href="#classic"/></svg><svg class="argentina" aria-label="Classic Argentina miniature"><use href="#classic"/></svg></div><small>44 px tall · front-view proxy</small></div></div>
+<div class="notes"><div class="note"><b>Best for</b><span>Reference fidelity and a vintage tabletop feel.</span></div><div class="note"><b>Tradeoff</b><span>Fine face and limb detail fades at game scale.</span></div><button class="choose" data-option="A" aria-pressed="false">Choose A — Classic <span aria-hidden="true">↗</span></button></div>
+</article>
+<article class="concept" id="option-b" aria-labelledby="name-b">
+<div class="box-top"><div class="model-line"><span class="letter">B</span><span class="material">Painted beech + dowel joints</span></div><h2 id="name-b">Workshop Eleven</h2><p class="subhead">A little team from the wooden toy chest.</p></div>
+<div class="figure-window"><span class="front">FRONT / MATCHED DISPLAY HEIGHT</span><svg class="lineup" viewBox="0 0 420 365" role="img" aria-label="Wooden chunky players with dowel shoulders, turned heads and plinths in Spain and Argentina kits"><use href="#wooden" x="18" y="39" width="185" height="278" class="spain"/><use href="#wooden" x="216" y="39" width="185" height="278" class="argentina"/><text x="110" y="342" text-anchor="middle">SPAIN / RED + GOLD</text><text x="307" y="342" text-anchor="middle">ARG / SKY + WHITE</text></svg></div>
+<div class="caption"><p><strong>Chunky, turned and hand-painted.</strong> Barrel bodies, exposed shoulder pegs, quiet wood grain and low oval plinths create a crafted, stackable shape.</p></div>
+<div class="detail-row"><div class="detail"><h3>Keeper / mitten hands</h3><div class="keepers"><div class="keeper"><svg class="esp-keeper" aria-label="Spain wooden keeper in pine green"><use href="#wooden"/></svg>ESP / PINE</div><div class="keeper"><svg class="arg-keeper" aria-label="Argentina wooden keeper in amber"><use href="#wooden"/></svg>ARG / AMBER</div></div></div><div class="detail"><h3>Small-scale read</h3><div class="tiny-pitch"><svg class="spain" aria-label="Wooden Spain miniature"><use href="#wooden"/></svg><svg class="argentina" aria-label="Wooden Argentina miniature"><use href="#wooden"/></svg></div><small>44 px tall · front-view proxy</small></div></div>
+<div class="notes"><div class="note"><b>Best for</b><span>Warm oak-board harmony and clear kit blocks.</span></div><div class="note"><b>Tradeoff</b><span>Rigid posing; plinths feel like board-game pieces.</span></div><button class="choose" data-option="B" aria-pressed="false">Choose B — Workshop <span aria-hidden="true">↗</span></button></div>
+</article>
+<article class="concept" id="option-c" aria-labelledby="name-c">
+<div class="box-top"><div class="model-line"><span class="letter">C</span><span class="material">Soft-touch sculpted vinyl</span></div><h2 id="name-c">Pocket All-Stars</h2><p class="subhead">Big personality. Small footballers.</p></div>
+<div class="figure-window"><span class="front">FRONT / MATCHED DISPLAY HEIGHT</span><svg class="lineup" viewBox="0 0 420 365" role="img" aria-label="Vinyl big-head players with compact bodies and oversized boots in Spain and Argentina kits"><use href="#vinyl" x="18" y="39" width="185" height="278" class="spain"/><use href="#vinyl" x="216" y="39" width="185" height="278" class="argentina"/><text x="110" y="342" text-anchor="middle">SPAIN / RED + GOLD</text><text x="307" y="342" text-anchor="middle">ARG / SKY + WHITE</text></svg></div>
+<div class="caption"><p><strong>Oversized heads, compact little kits.</strong> Soft sculpted hair, rounded mitts and wide boots make an expressive, deliberately less realistic collectible.</p></div>
+<div class="detail-row"><div class="detail"><h3>Keeper / padded mitts</h3><div class="keepers"><div class="keeper"><svg class="esp-keeper" aria-label="Spain vinyl keeper in pine green"><use href="#vinyl"/></svg>ESP / PINE</div><div class="keeper"><svg class="arg-keeper" aria-label="Argentina vinyl keeper in amber"><use href="#vinyl"/></svg>ARG / AMBER</div></div></div><div class="detail"><h3>Small-scale read</h3><div class="tiny-pitch"><svg class="spain" aria-label="Vinyl Spain miniature"><use href="#vinyl"/></svg><svg class="argentina" aria-label="Vinyl Argentina miniature"><use href="#vinyl"/></svg></div><small>44 px tall · front-view proxy</small></div></div>
+<div class="notes"><div class="note"><b>Best for</b><span>Playful character and a bold readable silhouette.</span></div><div class="note"><b>Tradeoff</b><span>Large heads hide more shirt from above.</span></div><button class="choose" data-option="C" aria-pressed="false">Choose C — Pocket <span aria-hidden="true">↗</span></button></div>
+</article>
+</div>
+<section class="decision" aria-label="Choice instructions"><div><p><strong>Pick a direction: reply “A”, “B” or “C”.</strong></p><p id="selection" role="status" aria-live="polite">No option selected. Buttons mark a preference on this page only; they do not apply it to gameplay.</p></div><button class="reset" type="button">Clear preference</button></section>
+</main>
+<footer><p>Shared world: green tabletop · oak surround · square white lattice goal</p><p>Original toy studies / no real-player likenesses / offline edition</p></footer>
+<script src="./toybox-concepts.js" defer></script>
+</body>
+</html>

@@ -1,0 +1,63 @@
+import { expect, it } from 'vitest';
+import * as THREE from 'three';
+import { createGame } from '../shared/engine';
+import { createAthleticFigure } from './athletic-figures';
+import { poseFigure } from './scene';
+
+const dimensions = (object: THREE.Object3D) => new THREE.Box3().setFromObject(object).getSize(new THREE.Vector3());
+it('sculpts A2 as a broad, square-jawed bearded captain rather than recolouring A1', () => {
+  const p = createGame().players[2];
+  const lean = createAthleticFigure(p, 2, 'A1');
+  const captain = createAthleticFigure(p, 2, 'A2');
+  expect(captain.root.userData.displayName).toBe('Power Captain');
+  expect(dimensions(captain.root.getObjectByName('jersey')!).x).toBeGreaterThan(dimensions(lean.root.getObjectByName('jersey')!).x + 0.1);
+  expect(dimensions(captain.root.getObjectByName('neck')!).x).toBeGreaterThan(dimensions(lean.root.getObjectByName('neck')!).x);
+  expect(captain.root.getObjectByName('beard')).toBeDefined();
+  expect(captain.root.getObjectByName('captain-armband')).toBeDefined();
+  expect(dimensions(captain.root.getObjectByName('jaw')!).x).toBeGreaterThan(dimensions(lean.root.getObjectByName('jaw')!).x);
+  expect(dimensions(captain.root).y).toBeLessThan(3.5);
+});
+it('gives A3 its own compact runner mould, textured hair and an actual white wraparound headband', () => {
+  const p = createGame().players[1];
+  const runner = createAthleticFigure(p, 1, 'A3');
+  const lean = createAthleticFigure(p, 1, 'A1');
+  expect(runner.root.userData.displayName).toBe('Midfield Runner');
+  const headband = runner.root.getObjectByName('headband') as THREE.Mesh<THREE.BufferGeometry, THREE.MeshPhysicalMaterial>;
+  expect(headband).toBeDefined();
+  expect(headband.material.color.getHex()).toBe(0xfffdf5);
+  expect(runner.root.getObjectByName('headband-knot')).toBeDefined();
+  expect(runner.root.getObjectByName('hair-texture')).toBeDefined();
+  expect(dimensions(runner.root.getObjectByName('jersey')!).x).toBeLessThan(dimensions(lean.root.getObjectByName('jersey')!).x);
+  expect(runner.root.getObjectByName('beard')).toBeUndefined();
+  expect(dimensions(runner.root).y).toBeGreaterThan(2.8);
+  expect(dimensions(runner.root).y).toBeLessThan(3.5);
+  const before = structuredClone(p);
+  for (let i = 0; i < 20; i++) poseFigure(runner, p, i / 10, false, { style: i % 3, seconds: i / 10, index: 1 });
+  expect(p).toEqual(before);
+  runner.root.traverse(object => {
+    if (object instanceof THREE.Mesh) expect(Array.from(object.geometry.getAttribute('position').array).every(Number.isFinite)).toBe(true);
+  });
+});
+it('builds a grounded adult A1 with independently poseable limbs and Spain kit without mutating the player', () => {
+  const player = createGame().players[0];
+  const before = structuredClone(player);
+  const rig = createAthleticFigure(player, 0, 'A1');
+  expect(player).toEqual(before);
+  expect(rig.root.name).toBe(`player-${player.id}`);
+  expect(rig.root.userData).toMatchObject({ characterId: 'A1', displayName: 'Matchday Athlete' });
+  expect(rig.legs).toHaveLength(2); expect(rig.arms).toHaveLength(2);
+  for (const name of ['jersey', 'face', 'hair', 'boot-left', 'boot-right']) expect(rig.root.getObjectByName(name)).toBeDefined();
+  expect(rig.root.getObjectByName('beard')).toBeUndefined();
+  const box = new THREE.Box3().setFromObject(rig.root);
+  expect(box.min.y).toBeGreaterThanOrEqual(-0.01);
+  expect(dimensions(rig.root).y).toBeGreaterThan(2.8);
+  expect(dimensions(rig.root).y).toBeLessThan(3.5);
+  expect(dimensions(rig.root.getObjectByName('face')!).y / dimensions(rig.root).y).toBeLessThan(0.2);
+  expect(rig.root.userData.markerHeight).toBeGreaterThan(box.max.y);
+  expect((rig.root.getObjectByName('jersey') as THREE.Mesh<THREE.BufferGeometry, THREE.MeshPhysicalMaterial>).material.color.getHex()).toBe(0xb52638);
+  expect((rig.root.getObjectByName('boot-left') as THREE.Mesh<THREE.BufferGeometry, THREE.MeshPhysicalMaterial>).material.color.getHex()).toBe(0x20272a);
+  for (const style of [0, 1, 2]) poseFigure(rig, player, 1, false, { style, seconds: 0.3, index: 0 });
+  poseFigure(rig, player, 0, true);
+  expect(rig.arms[0].rotation.z).toBeCloseTo(-0.26);
+  expect(rig.arms[1].rotation.z).toBeCloseTo(0.26);
+});

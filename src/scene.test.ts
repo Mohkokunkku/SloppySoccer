@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import { buildTabletop, createFigure, createFootball, cameraBounds, poseFigure } from './scene';
 import { FIELD, type Player } from '../shared/types';
+import {TEAMS} from './teams';
 
 it('frames the entire tabletop at both desktop and portrait aspect ratios', () => {
   for (const aspect of [2.2, 1.7, 1, 0.7]) {
@@ -13,6 +14,19 @@ it('frames the entire tabletop at both desktop and portrait aspect ratios', () =
 });
 
 describe('offline procedural toy geometry', () => {
+  it('shows national kit colours, Argentine stripes and country corner flags',()=>{
+    const p:Player={id:'home-0',team:'home',role:'outfield',x:0,y:0,vx:0,vy:0,facing:0,stamina:1};
+    const spain=createFigure(p,0);const argentina=createFigure({...p,id:'away-0',team:'away'},4);
+    expect(((spain.root.getObjectByName('jersey') as THREE.Mesh).material as THREE.MeshPhysicalMaterial).color.getHex()).toBe(TEAMS.home.primary);
+    expect(argentina.root.getObjectByName('argentina-stripe')).toBeDefined();
+    const board=buildTabletop();expect(board.getObjectByName('flag-home')).toBeDefined();expect(board.getObjectByName('flag-away')).toBeDefined();
+  });
+  it('applies a winning cheer and restores neutral limbs afterward',()=>{
+    const p:Player={id:'home-0',team:'home',role:'outfield',x:0,y:0,vx:0,vy:0,facing:0,stamina:1};const rig=createFigure(p,0);
+    poseFigure(rig,p,0,false,{style:0,seconds:0.3,index:0});
+    expect(rig.root.position.y).toBeGreaterThan(0.2);expect(Math.abs(rig.arms[0].rotation.z)).toBeGreaterThan(2);
+    poseFigure(rig,p,0,false);expect(rig.root.position.y).toBe(0.1);expect(rig.arms[0].rotation.z).toBeCloseTo(-0.26);
+  });
   it('maps game coordinates and facing to the scene and supports reduced-motion waddling', () => {
     const player: Player = { id: 'h1', team: 'home', role: 'outfield', x: 5, y: -3, vx: 4, vy: 0, facing: 0, stamina: 1 };
     const rig = createFigure(player, 0);

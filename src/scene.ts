@@ -2,8 +2,12 @@ import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { FIELD, type Player } from '../shared/types';
+import {TEAMS} from './teams';
+import {celebrationPose} from './celebrations';
+import {characterIdFor} from './character-id';
+import {createAthleticFigure} from './athletic-figures';
 
-export const COLORS = { coral: 0xed6652, cobalt: 0x345ac5, green: 0x39765b, ivory: 0xf8f3e6, charcoal: 0x252c2d, oak: 0xc89f70 };
+export const COLORS = { coral: TEAMS.home.primary, cobalt: TEAMS.away.primary, green: 0x39765b, ivory: 0xf8f3e6, charcoal: 0x252c2d, oak: 0xc89f70 };
 const plastic = (color: THREE.ColorRepresentation, roughness = 0.34) => new THREE.MeshPhysicalMaterial({ color, roughness, metalness: 0, clearcoat: 0.35, clearcoatRoughness: 0.3 });
 const ivory = plastic(COLORS.ivory);
 const black = plastic(0x20272a, 0.26);
@@ -135,6 +139,10 @@ export function buildTabletop(): THREE.Group {
   for (const x of [-16.25, 16.25]) for (const z of [-10.25, 10.25]) {
     const peg = mesh(new THREE.CylinderGeometry(0.07, 0.07, 0.8, 8), ivory, root, x, 0.38, z);
     mesh(new THREE.BoxGeometry(0.45, 0.27, 0.025), plastic(x < 0 ? COLORS.coral : COLORS.cobalt), peg, 0.2, 0.23, 0);
+    const country=x<0?'home':'away';
+    const flag=new THREE.Group();flag.name='flag-'+country;peg.add(flag);
+    TEAMS[country].flag.forEach((color,index)=>mesh(new THREE.BoxGeometry(0.72,index===1&&country==='home'?0.2:0.15,0.035),plastic(color),flag,0.36,0.4-index*0.15,0.02));
+    if(country==='away')ellipsoid(flag,plastic(0xe4b548),0.36,0.25,0.045,0.055,0.055,0.015);
   }
   for (const x of [-17.5, 17.5]) {
     const inlay = mesh(rounded(0.65, 0.03, 3.5, 0.06), plastic(x < 0 ? COLORS.coral : COLORS.cobalt), root, x, -0.13, 7.7);
@@ -145,15 +153,19 @@ export function buildTabletop(): THREE.Group {
 
 export interface FigureRig { root: THREE.Group; body: THREE.Group; legs: THREE.Group[]; arms: THREE.Group[] }
 export function createFigure(player: Player, index: number): FigureRig {
+  const characterId=characterIdFor(player.team,player.role,player.tacticalRole);
+  if(characterId)return createAthleticFigure(player,index,characterId);
   const root = new THREE.Group(); root.name = `player-${player.id}`;
   const body = new THREE.Group(); root.add(body);
   const keeper = player.role === 'keeper';
-  const kit = plastic(keeper ? COLORS.charcoal : player.team === 'home' ? COLORS.coral : COLORS.cobalt);
-  const shorts = plastic(keeper ? 0x202426 : player.team === 'home' ? 0xf1e9d6 : 0x253f8b);
+  const country=TEAMS[player.team];
+  const kit = plastic(keeper ? country.keeper : player.team === 'home' ? country.primary : country.secondary);
+  const shorts = plastic(keeper ? 0x202426 : country.shorts);
   const skin = plastic([0xe7b58a, 0xbd8258, 0xf1c7a0, 0x8f593b][index % 4], 0.57);
   const hair = plastic(index % 3 === 1 ? 0x503121 : 0x342c27, 0.58);
   const shirt = mesh(rounded(0.91, 0.78, 0.55, 0.16), kit, body, 0, 1.37, 0); shirt.name = 'jersey';
-  mesh(rounded(0.56, 0.07, 0.57, 0.03), ivory, body, 0, 1.72, 0);
+  if(!keeper&&player.team==='away')for(const x of [-0.3,0,0.3])for(const z of [-0.285,0.285]){const stripe=mesh(new THREE.BoxGeometry(0.13,0.65,0.018),plastic(country.primary),body,x,1.37,z);stripe.name='argentina-stripe';}
+  mesh(rounded(0.56, 0.07, 0.57, 0.03), plastic(player.team==='home'?TEAMS.home.secondary:TEAMS.away.primary), body, 0, 1.72, 0);
   mesh(new THREE.CylinderGeometry(0.15, 0.17, 0.16, 12), skin, body, 0, 1.83, 0);
   const face = ellipsoid(body, skin, 0, 2.11, 0.01, 0.3, 0.37, 0.3); face.name = 'face';
   const hairCap = mesh(new THREE.SphereGeometry(1, 16, 8, 0, Math.PI * 2, 0, Math.PI * 0.53), hair, body, 0, 2.19, -0.02);
@@ -169,7 +181,7 @@ export function createFigure(player: Player, index: number): FigureRig {
   ellipsoid(body, skin, 0, 2.065, 0.302, 0.06, 0.07, 0.065);
   const smile = mesh(new THREE.TorusGeometry(0.068, 0.011, 4, 12, Math.PI), black, body, 0, 2.005, 0.284); smile.rotation.z = Math.PI;
   // A raised chest badge and seam, like a tiny injection-moulded kit.
-  mesh(rounded(0.12, 0.15, 0.022, 0.02), ivory, body, -0.22, 1.49, 0.287);
+  mesh(rounded(0.12, 0.15, 0.022, 0.02), plastic(player.team==='home'?TEAMS.home.secondary:0xe4b548), body, -0.22, 1.49, 0.305);
   mesh(new THREE.BoxGeometry(0.025, 0.55, 0.014), kit, body, 0, 1.36, -0.283);
   const legs: THREE.Group[] = [], arms: THREE.Group[] = [];
   for (const side of [-1, 1]) {
@@ -188,7 +200,7 @@ export function createFigure(player: Player, index: number): FigureRig {
   return { root, body, legs, arms };
 }
 
-export function poseFigure(rig: FigureRig, player: Player, elapsed: number, reducedMotion: boolean): void {
+export function poseFigure(rig: FigureRig, player: Player, elapsed: number, reducedMotion: boolean, cheer?:{style:number;seconds:number;index:number}): void {
   rig.root.position.set(player.x, 0.1, player.y);
   rig.root.rotation.y = Math.PI / 2 - player.facing;
   const speed = Math.min(1, Math.hypot(player.vx, player.vy) / 4);
@@ -197,6 +209,15 @@ export function poseFigure(rig: FigureRig, player: Player, elapsed: number, redu
   rig.body.position.y = Math.abs(wave) * 0.07;
   rig.legs[0].rotation.x = wave * 0.48; rig.legs[1].rotation.x = -wave * 0.48;
   rig.arms[0].rotation.x = -wave * 0.4; rig.arms[1].rotation.x = wave * 0.4;
+  rig.arms.forEach((arm,index)=>{arm.rotation.z=(index===0?-1:1)*(player.role==='keeper'?0.94:0.26);});
+  if(cheer){
+    const pose=celebrationPose(cheer.style,cheer.seconds,cheer.index,reducedMotion);
+    rig.root.position.y+=pose.hop;rig.root.position.x+=pose.side;rig.root.rotation.y+=pose.yaw;
+    rig.body.rotation.z=pose.roll;rig.body.position.y=0;
+    rig.arms[0].rotation.z=pose.leftArm;rig.arms[1].rotation.z=pose.rightArm;
+    rig.arms[0].rotation.x=rig.arms[1].rotation.x=0;
+    rig.legs[0].rotation.x=pose.leftLeg;rig.legs[1].rotation.x=pose.rightLeg;
+  }
 }
 
 export function createFootball(): THREE.Group {

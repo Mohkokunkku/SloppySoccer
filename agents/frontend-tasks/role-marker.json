@@ -1,0 +1,10 @@
+{
+  "id": "role-marker",
+  "target": "src/role-marker.ts",
+  "description": "Return one tiny pure TypeScript role-marker function only.",
+  "requirements": [
+    "Export function roleMarker(role: 'attacker' | 'midfielder' | 'defender' | 'keeper' | undefined): string",
+    "attacker returns A; midfielder returns M; defender returns D; keeper returns GK; undefined returns ?",
+    "No imports, tools, side effects or other exports. Return complete compilable code in the requested JSON code field."
+  ]
+}

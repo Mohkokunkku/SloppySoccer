@@ -1,4 +1,7 @@
 import './style.css';
+import './international.css';
+import {GameAudio} from './audio';
+import {DANCE_NAMES,celebrationStyle} from './celebrations';
 import { createGame, startGame, stepGame } from '../shared/engine';
 import { DEFAULT_CONFIG, type MatchConfig, type MatchResult } from '../shared/types';
 import { InputController } from './input';
@@ -15,15 +18,15 @@ app.innerHTML = `
   <main class="workshop">
     <header class="masthead">
       <a class="wordmark" href="/" aria-label="Sloppy Soccer home">Sloppy<span>Soccer<span class="logo-ball" aria-hidden="true">✳</span></span></a>
-      <p class="tagline">Role-based AI preview</p>
-      <a class="design-link" href="/design-board.html">Inside the toy box <span aria-hidden="true">↗</span></a>
+      <p class="tagline">Spain vs Argentina · Toybox preview</p>
+      <a class="design-link" href="/squad.html">Meet Spain's squad <span aria-hidden="true">↗</span></a>
     </header>
     <section class="game-box" aria-label="Sloppy Soccer game">
       <div class="matchbar">
         <div class="scoreboard" aria-label="Match score and time">
-          <span class="team home">Coral <strong id="home-score">0</strong></span>
+          <span class="team home"><span class="country-flag flag-es" aria-hidden="true"></span> Spain <strong id="home-score">0</strong></span>
           <span class="clock"><span class="clock-caption" id="phase-label">Kick-off</span><time id="clock">2:00</time></span>
-          <span class="team away"><strong id="away-score">0</strong> Cobalt</span>
+          <span class="team away"><strong id="away-score">0</strong> Argentina <span class="country-flag flag-ar" aria-hidden="true"></span></span>
         </div>
         <button class="quiet-button" id="pause" type="button" disabled>Pause</button>
         <button class="quiet-button" id="restart" type="button" disabled>Restart</button>
@@ -34,7 +37,7 @@ app.innerHTML = `
         <aside class="match-panel" id="match-panel" aria-labelledby="panel-title">
           <div class="toy-label" aria-hidden="true">4-a-side tabletop football</div>
           <h1 id="panel-title">Small teams.<br>Big nonsense.</h1>
-          <p id="panel-copy">You're Coral. Take the little legs to the right-hand goal.</p>
+          <p id="panel-copy">You're Spain. Take the little legs to the right-hand goal.</p>
           <form id="setup">
             <fieldset><legend>Opposition</legend><div class="choices">
               <label><input type="radio" name="difficulty" value="easy"><span>Easy</span></label>
@@ -53,11 +56,12 @@ app.innerHTML = `
         </aside>
       </div>
       <div class="control-strip">
-        <p class="team-note"><span class="team-dot" aria-hidden="true"></span> You play Coral <span aria-hidden="true">→</span></p>
+        <p class="team-note"><span class="team-dot" aria-hidden="true"></span> You play Spain <span aria-hidden="true">→</span></p>
         <p class="team-note" aria-live="polite">Selected: <span id="controlled-role">Attacker</span></p>
         <div class="keyboard-guide" aria-label="Keyboard controls"><span><kbd>WASD</kbd> / <kbd>↑↓←→</kbd> Move</span><span><kbd>Space</kbd> Shoot</span><span><kbd>E</kbd> Pass</span><span><kbd>Q</kbd> Switch</span><span><kbd>Shift</kbd> Sprint</span><span><kbd>Esc</kbd> Pause</span></div>
         <button class="quiet-button touch-toggle" id="touch-toggle" type="button" aria-pressed="false" aria-controls="touch-controls">Touch controls</button>
       </div>
+      <div class="match-extras"><span class="role-legend">A Attacker &nbsp; M Midfield &nbsp; D Defender &nbsp; GK Keeper</span><button id="sound-toggle" type="button" class="quiet-button" aria-pressed="false">Sound off</button><button id="sound-test" type="button" class="quiet-button">Test sound</button><a href="/celebrations.html">Preview goal dances</a><span id="audio-status" role="status"></span></div>
       <div class="touch-controls" id="touch-controls" aria-label="Touch game controls" hidden>
         <div class="dpad" role="group" aria-label="Move player">
           <button class="up" type="button" data-code="ArrowUp" aria-label="Move up">↑</button>
@@ -92,6 +96,7 @@ const announcer = element('announcer');
 const input = new InputController();
 const stepper = new FixedStepper();
 const saves = new SaveOnce();
+const audio = new GameAudio();
 let config: MatchConfig = { ...DEFAULT_CONFIG };
 let state = createGame(config);
 let paused = false;
@@ -136,9 +141,9 @@ function renderResults(): void {
   for (const result of results) {
     const row = document.createElement('li');
     const score = document.createElement('p');
-    const home = document.createElement('span'); home.className = 'result-home'; home.textContent = `Coral ${result.home}`;
+    const home = document.createElement('span'); home.className = 'result-home'; home.textContent = `Spain ${result.home}`;
     const divider = document.createElement('span'); divider.className = 'result-divider'; divider.textContent = '–';
-    const away = document.createElement('span'); away.className = 'result-away'; away.textContent = `${result.away} Cobalt`;
+    const away = document.createElement('span'); away.className = 'result-away'; away.textContent = `${result.away} Argentina`;
     score.append(home, divider, away);
     const detail = document.createElement('p'); detail.className = 'result-detail';
     const date = document.createElement('time'); date.dateTime = result.createdAt;
@@ -170,12 +175,13 @@ function beginMatch(): void {
   finishedHandled = false;
   paused = false;
   clearInput();
+  audio.reset();void audio.unlock();
   startGame(state);
   updateUI(); focusPitch();
 }
 function setPaused(value: boolean, moveFocus = true): void {
-  if (state.phase !== 'playing' && state.phase !== 'goal') return;
-  paused = value; clearInput(); updateUI();
+  if (state.phase !== 'playing' && state.phase !== 'goal' && state.phase !== 'resetting') return;
+  paused = value;if(paused)audio.quiet();clearInput(); updateUI();
   if (moveFocus) {
     if (paused) element('resume').focus({ preventScroll: true });
     else focusPitch();
@@ -197,16 +203,18 @@ function updateUI(): void {
   const hint = roleHint(selectedRole);
   if (element('controlled-role').title !== hint) element('controlled-role').title = hint;
   const view = matchPresentation(state.phase, paused, state.score.home, state.score.away);
-  const phaseLabel = paused ? 'Paused' : state.phase === 'ready' ? 'Kick-off' : state.phase === 'finished' ? 'Full time' : state.phase === 'goal' ? 'Goal!' : 'In play';
+  const phaseLabel = paused ? 'Paused' : state.phase === 'ready' ? 'Kick-off' : state.phase === 'finished' ? 'Full time' : state.phase === 'goal' ? 'Goal!' : state.phase==='resetting'?'Back to kick-off':'In play';
   setText(element('phase-label'), phaseLabel);
   const goal = element('goal-banner');
   goal.hidden = state.phase !== 'goal' || paused;
-  const goalText = state.lastScorer === 'home' ? 'Coral scores!' : 'Cobalt scores!';
+  const teamName=state.lastScorer==='home'?'Spain':'Argentina';
+  const goalText = teamName+' scores! '+DANCE_NAMES[celebrationStyle(state.score.home+state.score.away)];
   if (goal.textContent !== goalText) goal.textContent = goalText;
   goal.classList.toggle('cobalt-goal', state.lastScorer === 'away');
-  pauseButton.disabled = !renderer || (state.phase !== 'playing' && state.phase !== 'goal');
+  pauseButton.disabled = !renderer || (state.phase !== 'playing' && state.phase !== 'goal' && state.phase !== 'resetting');
   setText(pauseButton, paused ? 'Resume' : 'Pause');
   restartButton.disabled = !renderer || state.phase === 'ready';
+  const soundButton=element<HTMLButtonElement>('sound-toggle');setText(soundButton,audio.enabled?'Sound on':'Sound off');soundButton.setAttribute('aria-pressed',String(audio.enabled));soundButton.dataset.played=String(audio.played);setText(element('audio-status'),audio.lastError??'');
   if (view.overlay === lastView) return;
   lastView = view.overlay;
   panel.hidden = view.overlay === 'none';
@@ -217,15 +225,15 @@ function updateUI(): void {
   const title = element('panel-title');
   title.textContent = view.overlay === 'ready' ? 'Small teams. Big nonsense.' : view.title;
   element('panel-copy').textContent = view.overlay === 'ready'
-    ? "You're Coral. Take the little legs to the right-hand goal."
+    ? "You're Spain. Take the little legs to the right-hand goal."
     : view.overlay === 'paused' ? 'The little legs can wait. Pick up exactly where you left off.'
     : 'Full time. Same tiny pitch, one more big chance?';
   if (view.overlay === 'finished') {
-    element('final-score').textContent = `Coral ${state.score.home} – ${state.score.away} Cobalt`;
-    announcer.textContent = `Full time. Coral ${state.score.home}, Cobalt ${state.score.away}. ${view.title}`;
+    element('final-score').textContent = `Spain ${state.score.home} – ${state.score.away} Argentina`;
+    announcer.textContent = `Full time. Spain ${state.score.home}, Argentina ${state.score.away}. ${view.title}`;
     element('rematch').focus({ preventScroll: true });
   } else if (view.overlay === 'paused') announcer.textContent = 'Match paused.';
-  else if (view.overlay === 'none') announcer.textContent = 'Match in play. You control Coral and attack right.';
+  else if (view.overlay === 'none') announcer.textContent = 'Match in play. You control Spain and attack right.';
 }
 async function finishMatch(): Promise<void> {
   const payload = completedPayload(state, config.duration);
@@ -265,6 +273,9 @@ restartButton.addEventListener('click', beginMatch);
 element('paused-restart').addEventListener('click', beginMatch);
 element('rematch').addEventListener('click', beginMatch);
 element('new-setup').addEventListener('click', resetSetup);
+element('sound-toggle').addEventListener('click',()=>{audio.setEnabled(!audio.enabled);updateUI();});
+element('sound-test').addEventListener('click',()=>{audio.demo();updateUI();});
+window.addEventListener('pagehide',()=>audio.quiet());
 
 const gameKeys = new Set(['KeyW', 'KeyA', 'KeyS', 'KeyD', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space', 'KeyE', 'KeyQ', 'ShiftLeft', 'ShiftRight']);
 window.addEventListener('keydown', event => {
@@ -328,7 +339,7 @@ try {
     const delta = lastFrame ? (now - lastFrame) / 1000 : 0;
     lastFrame = now;
     if (!paused && !document.hidden && state.phase !== 'ready' && state.phase !== 'finished') {
-      stepper.advance(delta, dt => stepGame(state, input.consume(), dt, config));
+      stepper.advance(delta, dt => {stepGame(state, input.consume(), dt, config);audio.update(state);});
     }
     updateUI();
     if (state.phase === 'finished' && !finishedHandled) {
@@ -336,7 +347,7 @@ try {
       // finishMatch handles expected failures; this also catches storage/UI failures.
       void finishMatch().catch(() => { element('save-status').textContent = 'Score could not be saved. You can still play again.'; });
     }
-    renderer?.render(state, now);
+    renderer?.render(state, now,paused);
   });
   updateUI();
 } catch { webglError(); }

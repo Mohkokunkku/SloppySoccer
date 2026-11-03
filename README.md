@@ -15,13 +15,18 @@ Open http://127.0.0.1:3000. This is **single-player versus AI**, with three outf
 ## Role-based AI branch
 `feature/role-based-ai` adds persistent attacker/midfielder/defender roles. One AI chases or presses; the attacker seeks a clear forward passing lane, midfield screens/connects play, and defense stays underneath. Settled support players stop inside a deadzone; tactical targets refresh every0.2seconds, with immediate replanning after possession/control changes. User movement and the keeper jam fix remain intact.
 
-The selected role is shown under the pitch; hover its label for a short role hint. Frontend code proposals use `gpt-6.1-sol` with low reasoning. See `agents/README.md`.
+The selected role is shown under the pitch; hover its label for a short role hint. Frontend code proposals use `gpt-6.1-sol` with low reasoning. Local Ollama workers are disabled and are not automatic fallbacks. See `agents/README.md`.
 
 For an isolated Windows Git-Bash preview after `npm run build`:
 ```sh
 PORT=3001 DATA_DIR="D:/SloppySoccer/Game/.local-server/role-preview-data" npm start
 ```
 Open http://127.0.0.1:3001. This does not merge or deploy the branch to main.
+
+## Spain's mixed squad
+`feature/toybox-international` uses three distinct sporty adult toy moulds in Spain's outfield: **A1 Matchday Athlete** as attacker, **A3 Midfield Runner** as midfielder, and **A2 Power Captain** as defender. Spain's goalkeeper and Argentina retain their original figures. The changes are cosmetic; role AI and physics are unchanged by the character factory.
+
+Open `/squad.html` for the actual 3D squad shelf with front/three-quarter/back controls and phone-friendly individual focus. `/celebrations.html` rehearses the three five-second goal dances and visible return to kickoff. The earlier 2D concepts remain at `/toybox-concepts.html` and `/athletic-concepts.html`. Sound is optional: use **Sound on** and **Test sound** in the match. See `docs/spain-squad.md` for architecture and verification.
 
 ## Development
 ```sh
