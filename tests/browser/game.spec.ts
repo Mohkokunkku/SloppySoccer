@@ -37,7 +37,7 @@ test('a complete one-minute match saves exactly once to the real backend', async
   expect(stored.results.some((row: {duration:number;home:number;away:number}) => row.duration === 60 && row.home === submitted.home && row.away === submitted.away)).toBe(true);
   await page.screenshot({path:'test-results/sloppy-soccer-fulltime.png',fullPage:true});
   await page.getByRole('button', {name:'Play again'}).click();
-  await expect(page.locator('#phase-label')).toHaveText('In play');
+  await expect(page.locator('#phase-label')).toHaveText('In play', {timeout:30_000});
   expect(posts).toHaveLength(1);
 });
 
@@ -46,6 +46,7 @@ test('shows the selected tactical role and updates it when switching players',as
   await expect(page.locator('#controlled-role')).toHaveText('Attacker');
   await expect(page.locator('#controlled-role')).toHaveAttribute('title','Find space ahead for a pass.');
   await page.getByRole('button',{name:'Start match'}).click();
+  await expect(page.locator('#phase-label')).toHaveText('In play',{timeout:30_000});
   await page.keyboard.press('q');
   await expect(page.locator('#controlled-role')).toHaveText(/Midfielder|Defender/);
 });

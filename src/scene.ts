@@ -1,11 +1,14 @@
 import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
-import { FIELD, type Player } from '../shared/types';
+import { FIELD, type Player, type GameTuning } from '../shared/types';
+import {DEFAULT_TUNING} from '../shared/tuning';
+import {advanceLocomotion, type Locomotion} from './locomotion';
 import {TEAMS} from './teams';
 import {celebrationPose} from './celebrations';
 import {characterIdFor} from './character-id';
 import {createAthleticFigure} from './athletic-figures';
+import {articulateRunningRig} from './running-joints';
 
 export const COLORS = { coral: TEAMS.home.primary, cobalt: TEAMS.away.primary, green: 0x39765b, ivory: 0xf8f3e6, charcoal: 0x252c2d, oak: 0xc89f70 };
 const plastic = (color: THREE.ColorRepresentation, roughness = 0.34) => new THREE.MeshPhysicalMaterial({ color, roughness, metalness: 0, clearcoat: 0.35, clearcoatRoughness: 0.3 });
@@ -32,9 +35,9 @@ function bar(parent: THREE.Object3D, a: THREE.Vector3, b: THREE.Vector3, radius:
   object.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), direction.normalize());
 }
 
-export function cameraBounds(aspect: number): { width: number; height: number } {
+export function cameraBounds(aspect: number, tuning:GameTuning=DEFAULT_TUNING,entranceHeight=tuning.fieldHeight): { width: number; height: number } {
   const safeAspect = Math.max(0.1, aspect);
-  const height = Math.max(29, 43 / safeAspect);
+  const height = Math.max(29+(Math.max(tuning.fieldHeight,entranceHeight)-20)*.8, (tuning.fieldWidth+11) / safeAspect);
   return { width: height * safeAspect, height };
 }
 
@@ -67,9 +70,9 @@ export function shadowTexture(): THREE.DataTexture {
   texture.needsUpdate = true; return texture;
 }
 
-function goal(side: -1 | 1): THREE.Group {
-  const group = new THREE.Group(); group.name = side === -1 ? 'goal-home' : 'goal-away'; group.position.x = side * FIELD.width / 2;
-  const depth = FIELD.goalDepth * side, half = FIELD.goalWidth / 2, height = 2.8;
+function goal(side: -1 | 1,tuning:GameTuning): THREE.Group {
+  const group = new THREE.Group(); group.name = side === -1 ? 'goal-home' : 'goal-away'; group.position.x = side * tuning.fieldWidth / 2;
+  const depth = FIELD.goalDepth * side, half = tuning.goalWidth / 2, height = tuning.goalHeight;
   const v = (x: number, y: number, z: number) => new THREE.Vector3(x, y, z);
   for (const z of [-half, half]) {
     bar(group, v(0, 0, z), v(0, height, z), 0.105, ivory);
@@ -87,11 +90,11 @@ function goal(side: -1 | 1): THREE.Group {
     segments.push([depth / 2, height, z, FIELD.goalDepth, 0.045, 0.045]);
   }
   for (let y = 0.4; y < height; y += 0.4) {
-    segments.push([depth, y, 0, 0.045, 0.045, FIELD.goalWidth]);
+    segments.push([depth, y, 0, 0.045, 0.045, tuning.goalWidth]);
     for (const z of [-half, half]) segments.push([depth / 2, y, z, FIELD.goalDepth, 0.045, 0.045]);
   }
   for (let x = 0.4; x < FIELD.goalDepth; x += 0.4) {
-    segments.push([side * x, height, 0, 0.045, 0.045, FIELD.goalWidth]);
+    segments.push([side * x, height, 0, 0.045, 0.045, tuning.goalWidth]);
     for (const z of [-half, half]) segments.push([side * x, height / 2, z, 0.045, height, 0.045]);
   }
   const lattice = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1), ivory, segments.length);
@@ -103,12 +106,12 @@ function goal(side: -1 | 1): THREE.Group {
   group.add(lattice); return group;
 }
 
-export function buildTabletop(): THREE.Group {
+export function buildTabletop(tuning:GameTuning=DEFAULT_TUNING,entranceHeight=tuning.fieldHeight): THREE.Group {
   const root = new THREE.Group(); root.name = 'tabletop';
   const wood = new THREE.MeshStandardMaterial({ map: woodTexture(), roughness: 0.64, color: 0xffffff });
   const plinth = mesh(rounded(39.4, 1.25, 26.8, 0.32), wood, root, 0, -0.79, 0);
   plinth.name = 'oak-plinth';
-  mesh(rounded(38.6, 0.25, 26.1, 0.12), plastic(0x9a6d41, 0.62), root, 0, -1.42, 0);
+  const lowerBase=mesh(rounded(38.6, 0.25, 26.1, 0.12), plastic(0x9a6d41, 0.62), root, 0, -1.42, 0);
   const surround = mesh(rounded(35.7, 0.19, 23.3, 0.11), plastic(0x254c3b, 0.7), root, 0, -0.08, 0);
   surround.name = 'green-surround';
   const pitch = mesh(new THREE.PlaneGeometry(32, 20), new THREE.MeshStandardMaterial({ color: COLORS.green, roughness: 0.94 }), root, 0, 0.025, 0);
@@ -134,7 +137,7 @@ export function buildTabletop(): THREE.Group {
   for (const x of [-11.5, 0, 11.5]) {
     const spot = mesh(new THREE.CircleGeometry(0.12, 16), mark, root, x, 0.049, 0); spot.rotation.x = -Math.PI / 2; spot.castShadow = false;
   }
-  root.add(goal(-1), goal(1));
+
   // Ivory corner pegs and a tiny colour inlay make the board a physical object.
   for (const x of [-16.25, 16.25]) for (const z of [-10.25, 10.25]) {
     const peg = mesh(new THREE.CylinderGeometry(0.07, 0.07, 0.8, 8), ivory, root, x, 0.38, z);
@@ -148,13 +151,40 @@ export function buildTabletop(): THREE.Group {
     const inlay = mesh(rounded(0.65, 0.03, 3.5, 0.06), plastic(x < 0 ? COLORS.coral : COLORS.cobalt), root, x, -0.13, 7.7);
     inlay.castShadow = false;
   }
+  const sx=tuning.fieldWidth/32,sz=tuning.fieldHeight/20;
+  // Bake dimensions into the board geometry, not a parent scale that stretches goals/figures.
+  const boardScale=new THREE.Matrix4().makeScale(sx,1,sz);
+  for(const child of root.children){child.updateMatrix();child.matrix.premultiply(boardScale).decompose(child.position,child.quaternion,child.scale);}
+  pitch.geometry.scale(sx,sz,1);pitch.scale.set(1,1,1);
+  // Keep the original entrance deck connected while a tester shrinks the pitch.
+  const entranceSupport=Math.max(tuning.fieldHeight,entranceHeight)/tuning.fieldHeight;
+  plinth.scale.z*=entranceSupport;lowerBase.scale.z*=entranceSupport;
+  root.add(goal(-1,tuning),goal(1,tuning));
+  const tunnel=new THREE.Group();tunnel.name='entry-tunnel';tunnel.position.z=entranceHeight/2+2;root.add(tunnel);
+  const deck=mesh(rounded(8,.3,5.2,.15),wood,tunnel,0,-.1,1);deck.name='queue-deck';
+  for(const side of [-1,1]){
+    const team=side<0?'home':'away',color=plastic(TEAMS[team].primary);
+    const door=new THREE.Group();door.name='door-'+team;door.userData.label=TEAMS[team].name+' dressing room';door.position.x=side*2;tunnel.add(door);
+    for(const x of [-.85,.85])mesh(rounded(.3,3.2,2.5),color,door,x,1.6,1.2);
+    mesh(rounded(2,.3,2.5),color,door,0,3.2,1.2);
+    mesh(new THREE.BoxGeometry(1.4,2.8,.12),plastic(0x182b30),door,0,1.4,2.4);
+    mesh(rounded(1.8,.3,.25),ivory,door,0,2.95,-.08);
+  }
   return root;
 }
 
-export interface FigureRig { root: THREE.Group; body: THREE.Group; legs: THREE.Group[]; arms: THREE.Group[] }
+export function disposeTabletop(root:THREE.Group):void {
+  const geometries=new Set<THREE.BufferGeometry>(),materials=new Set<THREE.Material>(),textures=new Set<THREE.Texture>();
+  root.traverse(object=>{if(object instanceof THREE.InstancedMesh)object.dispose();});
+  root.traverse(object=>{if(object instanceof THREE.Mesh){geometries.add(object.geometry);for(const material of Array.isArray(object.material)?object.material:[object.material])if(material!==ivory&&material!==mark&&material!==black)materials.add(material);}});
+  geometries.forEach(geometry=>{if(geometry!==sphere)geometry.dispose();});
+  materials.forEach(material=>{for(const value of Object.values(material))if(value instanceof THREE.Texture)textures.add(value);material.dispose();});textures.forEach(texture=>texture.dispose());
+}
+
+export interface FigureRig { root: THREE.Group; body: THREE.Group; legs: THREE.Group[]; arms: THREE.Group[]; knees?:THREE.Group[];elbows?:THREE.Group[]; locomotion?:Locomotion; poseTime?:number }
 export function createFigure(player: Player, index: number): FigureRig {
   const characterId=characterIdFor(player.team,player.role,player.tacticalRole);
-  if(characterId)return createAthleticFigure(player,index,characterId);
+  if(characterId)return articulateRunningRig(createAthleticFigure(player,index,characterId),true);
   const root = new THREE.Group(); root.name = `player-${player.id}`;
   const body = new THREE.Group(); root.add(body);
   const keeper = player.role === 'keeper';
@@ -197,23 +227,30 @@ export function createFigure(player: Player, index: number): FigureRig {
     mesh(new THREE.CapsuleGeometry(0.105, 0.27, 3, 8), keeper ? kit : skin, arm, 0, -0.46, 0.025);
     ellipsoid(arm, keeper ? ivory : skin, 0, -0.66, 0.05, keeper ? 0.145 : 0.12, 0.15, 0.12);
   }
-  return { root, body, legs, arms };
+  return articulateRunningRig({ root, body, legs, arms },false);
 }
 
 export function poseFigure(rig: FigureRig, player: Player, elapsed: number, reducedMotion: boolean, cheer?:{style:number;seconds:number;index:number}): void {
   rig.root.position.set(player.x, 0.1, player.y);
   rig.root.rotation.y = Math.PI / 2 - player.facing;
-  const speed = Math.min(1, Math.hypot(player.vx, player.vy) / 4);
-  const wave = reducedMotion ? 0 : Math.sin(elapsed * 14 + player.x * 0.16 + player.y * 0.11) * speed;
-  rig.body.rotation.z = wave * 0.075;
-  rig.body.position.y = Math.abs(wave) * 0.07;
-  rig.legs[0].rotation.x = wave * 0.48; rig.legs[1].rotation.x = -wave * 0.48;
-  rig.arms[0].rotation.x = -wave * 0.4; rig.arms[1].rotation.x = wave * 0.4;
+  const dt=Math.max(0,elapsed-(rig.poseTime??0));rig.poseTime=elapsed;
+  // Legacy standalone callers have no previous frame. The live renderer always seeds an actual baseline.
+  if(!rig.locomotion&&dt>0)rig.locomotion=advanceLocomotion(undefined,player.x-player.vx*Math.min(dt,.1),player.y-player.vy*Math.min(dt,.1),0,false,reducedMotion);
+  rig.locomotion=advanceLocomotion(rig.locomotion,player.x,player.y,dt,false,reducedMotion);
+  const wave=rig.locomotion.wave;
+  rig.body.rotation.x=rig.locomotion.lean;
+  rig.body.rotation.z = wave * 0.035;
+  rig.body.position.y = rig.locomotion.bob;
+  rig.legs[0].rotation.x = wave * 0.65; rig.legs[1].rotation.x = -wave * 0.65;
+  rig.arms[0].rotation.x = -wave * 0.58; rig.arms[1].rotation.x = wave * 0.58;
+  const jointBlend=reducedMotion||cheer?0:rig.locomotion.blend;
+  rig.knees?.forEach((joint,index)=>{joint.rotation.x=jointBlend*.12+(jointBlend?Math.max(0,index===0?wave:-wave)*1.05:0);});
+  rig.elbows?.forEach(joint=>{joint.rotation.x=jointBlend?-jointBlend*.8:0;});
   rig.arms.forEach((arm,index)=>{arm.rotation.z=(index===0?-1:1)*(player.role==='keeper'?0.94:0.26);});
   if(cheer){
     const pose=celebrationPose(cheer.style,cheer.seconds,cheer.index,reducedMotion);
     rig.root.position.y+=pose.hop;rig.root.position.x+=pose.side;rig.root.rotation.y+=pose.yaw;
-    rig.body.rotation.z=pose.roll;rig.body.position.y=0;
+    rig.body.rotation.z=pose.roll;rig.body.rotation.x=0;rig.body.position.y=0;
     rig.arms[0].rotation.z=pose.leftArm;rig.arms[1].rotation.z=pose.rightArm;
     rig.arms[0].rotation.x=rig.arms[1].rotation.x=0;
     rig.legs[0].rotation.x=pose.leftLeg;rig.legs[1].rotation.x=pose.rightLeg;

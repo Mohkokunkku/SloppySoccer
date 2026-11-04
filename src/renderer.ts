@@ -1,10 +1,14 @@
 import * as THREE from 'three';
 import { FIELD, type GameState } from '../shared/types';
+import {getTuning,DEFAULT_TUNING} from '../shared/tuning';
+import {advanceBallMotion,type BallMotion} from './ball-motion';
+import {kickoffPosition} from '../shared/engine';
+import {advanceLocomotion} from './locomotion';
 import {roleMarker} from './role-marker';
 import {tacticalRoleOf} from '../shared/tactics';
 import {celebrationStyle} from './celebrations';
 import {TEAMS} from './teams';
-import { buildTabletop, cameraBounds, COLORS, createFigure, createFootball, poseFigure, shadowTexture, type FigureRig } from './scene';
+import { buildTabletop, disposeTabletop, cameraBounds, COLORS, createFigure, createFootball, poseFigure, shadowTexture, type FigureRig } from './scene';
 
 /** Presentation only. shared/engine.ts is the sole owner of simulation. */
 export class ToyRenderer {
@@ -20,6 +24,16 @@ export class ToyRenderer {
   private reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
   private lastRender = 0;
   private motionTime=0;
+  private tuning={...DEFAULT_TUNING};
+  private entryHeight=DEFAULT_TUNING.fieldHeight;
+  private board:THREE.Group;
+  private geometrySignature='';
+  private boardRebuilds=0;
+  private ballMotion?:BallMotion;
+  private motionState:GameState|null=null;
+  private needsFrame=true;
+  private staticState:GameState|null=null;
+  private staticKey='';
   private labels=document.createElement('div');
   private markers=new Map<string,HTMLSpanElement>();
   private projected=new THREE.Vector3();
@@ -50,11 +64,12 @@ export class ToyRenderer {
     const fill = new THREE.DirectionalLight(0xe2e9ff, 1.4); fill.position.set(18, 12, -18); this.scene.add(fill);
     const floor = new THREE.Mesh(new THREE.PlaneGeometry(200, 200), new THREE.MeshStandardMaterial({ color: 0xece8dd, roughness: 1 }));
     floor.rotation.x = -Math.PI / 2; floor.position.y = -1.58; floor.receiveShadow = true; this.scene.add(floor);
-    this.scene.add(buildTabletop());
+    this.tuning=getTuning(state);this.entryHeight=state.phase==='entering'?(state.entrance?.fieldHeight??this.tuning.fieldHeight):this.tuning.fieldHeight;this.geometrySignature=this.signature();
+    this.board=buildTabletop(this.tuning,this.entryHeight);this.scene.add(this.board);
     const shadowMap = shadowTexture();
     const shadowMaterial = new THREE.MeshBasicMaterial({ map: shadowMap, transparent: true, depthWrite: false, opacity: 0.8 });
     state.players.forEach((player, index) => {
-      const rig = createFigure(player, index); this.figures.set(player.id, rig); this.scene.add(rig.root);
+      const rig = createFigure(player, index);rig.locomotion=advanceLocomotion(undefined,player.x,player.y,0,false,this.reducedMotion.matches); this.figures.set(player.id, rig); this.scene.add(rig.root);
       const shadow = new THREE.Mesh(new THREE.PlaneGeometry(2.3, 2.3), shadowMaterial);
       shadow.rotation.x = -Math.PI / 2; shadow.position.y = 0.06;
       this.shadows.set(player.id, shadow); this.scene.add(shadow);
@@ -74,10 +89,13 @@ export class ToyRenderer {
     this.observer = new ResizeObserver(() => this.resize()); this.observer.observe(host); this.resize();
   }
 
+  private signature():string {return [this.tuning.fieldWidth,this.tuning.fieldHeight,this.tuning.goalWidth,this.tuning.goalHeight,this.entryHeight].join(':');}
+
   private resize(): void {
+    this.needsFrame=true;
     const width = Math.max(1, this.host.clientWidth), height = Math.max(1, this.host.clientHeight);
     this.renderer.setSize(width, height);
-    const bounds = cameraBounds(width / height);
+    const bounds = cameraBounds(width / height,this.tuning,this.entryHeight);
     this.camera.left = -bounds.width / 2; this.camera.right = bounds.width / 2;
     this.camera.top = bounds.height / 2; this.camera.bottom = -bounds.height / 2;
     this.camera.updateProjectionMatrix();this.camera.updateMatrixWorld();
@@ -89,11 +107,23 @@ export class ToyRenderer {
 
   render(state: GameState, now: number, paused=false): void {
     const dt = Math.min(0.05, Math.max(0, (now - this.lastRender) / 1000)); this.lastRender = now;
-    if(!paused&&(state.phase==='playing'||state.phase==='resetting'))this.motionTime+=dt;
+    this.tuning=getTuning(state);
+    this.entryHeight=state.phase==='entering'?(state.entrance?.fieldHeight??this.tuning.fieldHeight):this.tuning.fieldHeight;
+    const geometryChanged=this.signature()!==this.geometrySignature;
+    if(geometryChanged){
+      this.scene.remove(this.board);disposeTabletop(this.board);this.board=buildTabletop(this.tuning,this.entryHeight);this.scene.add(this.board);
+      this.geometrySignature=this.signature();this.boardRebuilds++;this.resize();
+
+    }
+    const staticScene=paused||state.phase==='ready'||state.phase==='finished';
+    const staticKey=`${state.phase}:${paused}:${this.reducedMotion.matches}`;
+    if(staticScene&&!this.needsFrame&&this.staticState===state&&this.staticKey===staticKey)return;
+    this.staticState=staticScene?state:null;this.staticKey=staticKey;this.needsFrame=false;
+    if(!paused&&(state.phase==='playing'||state.phase==='resetting'||state.phase==='entering'))this.motionTime+=dt;
     state.players.forEach((player,index) => {
       const rig = this.figures.get(player.id);
       const cheer=state.phase==='goal'&&state.lastScorer===player.team?{style:celebrationStyle(state.score.home+state.score.away),seconds:5-state.phaseTimer,index:index%4}:undefined;
-      if (rig) poseFigure(rig, player, this.motionTime, this.reducedMotion.matches,cheer);
+      if (rig&&!paused) poseFigure(rig, player, this.motionTime, this.reducedMotion.matches,cheer);
       const marker=this.markers.get(player.id);
       if(marker){
         const label=roleMarker(player.role==='keeper'?'keeper':tacticalRoleOf(player)??undefined);if(marker.textContent!==label)marker.textContent=label;
@@ -104,23 +134,31 @@ export class ToyRenderer {
         const x=(this.projected.x+1)*this.host.clientWidth/2,y=(1-this.projected.y)*this.host.clientHeight/2;
         marker.style.transform=`translate(${x}px,${y}px) translate(-50%,-50%)`;
       }
-      const shadow = this.shadows.get(player.id); shadow?.position.set(player.x, 0.061, player.y);
+      const shadow = this.shadows.get(player.id); if(!paused)shadow?.position.set(player.x, 0.061, player.y);
     });
     const controlled = state.players.find(player => player.id === state.controlledId);
     this.selection.visible = Boolean(controlled);
-    if (controlled) this.selection.position.set(controlled.x, 0.075, controlled.y);
+    if (controlled&&!paused) this.selection.position.set(controlled.x, 0.075, controlled.y);
     const ball = state.ball;
-    this.ball.position.set(ball.x, Math.max(0, ball.z) + FIELD.ballRadius + 0.08, ball.y);
-    this.ball.rotation.x += ball.vy * dt / FIELD.ballRadius;
-    this.ball.rotation.z -= ball.vx * dt / FIELD.ballRadius;
-    this.ballShadow.position.set(ball.x, 0.064, ball.y);
-    this.ballShadow.scale.setScalar(1 + Math.max(0, ball.z) * 0.4);
-    (this.ballShadow.material as THREE.MeshBasicMaterial).opacity = 0.9 / (1 + Math.max(0, ball.z) * 0.65);
+    if(!paused)this.ball.position.set(ball.x, Math.max(0, ball.z) + FIELD.ballRadius + 0.08, ball.y);
+    this.ballMotion=advanceBallMotion(this.ballMotion,ball.x,ball.y,state.phase,paused,this.reducedMotion.matches,geometryChanged||this.motionState!==state);
+    this.motionState=state;
+    this.ball.rotation.x=this.ballMotion.x;this.ball.rotation.z=this.ballMotion.z;
+    if(!paused){
+      this.ballShadow.position.set(ball.x, 0.064, ball.y);
+      this.ballShadow.scale.setScalar(1 + Math.max(0, ball.z) * 0.4);
+      (this.ballShadow.material as THREE.MeshBasicMaterial).opacity = 0.9 / (1 + Math.max(0, ball.z) * 0.65);
+    }
+    const enteringCount=state.phase==='entering'?state.players.filter(player=>{const target=kickoffPosition(player.team,Number(player.id.split('-')[1]),'home',this.tuning);return Math.hypot(player.x-target.x,player.y-target.y)>.05;}).length:0;
+    this.host.dataset.entryAnchorHeight=String(this.entryHeight);
+    Object.assign(this.host.dataset,{phase:state.phase,fieldWidth:String(this.tuning.fieldWidth),fieldHeight:String(this.tuning.fieldHeight),goalWidth:String(this.tuning.goalWidth),goalHeight:String(this.tuning.goalHeight),ballRotation:`${this.ball.rotation.x},${this.ball.rotation.y},${this.ball.rotation.z}`,ballPosition:`${ball.x},${ball.y},${ball.z}`,runPhase:String(this.figures.values().next().value?.locomotion?.phase??0),entryCount:String(enteringCount),boardRebuilds:String(this.boardRebuilds)});
     this.renderer.render(this.scene, this.camera);
+    this.host.dataset.framesRendered=String(this.renderer.info?.render.frame??0);
   }
 
   dispose(): void {
     this.renderer.setAnimationLoop(null); this.observer.disconnect();
+    this.scene.remove(this.board);disposeTabletop(this.board);
     this.scene.traverse(object => {
       if (object instanceof THREE.Mesh) {
         object.geometry.dispose();

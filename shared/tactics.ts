@@ -1,4 +1,5 @@
 import { FIELD, type GameState, type Player, type TacticalRole, type Team } from './types.js';
+import { getTuning } from './tuning.js';
 
 export interface TacticalIntent {
   playerId: string;
@@ -30,6 +31,15 @@ function openAttackingLane(state: GameState, team: Team, origin: {x:number;y:num
   return candidates.sort((a, b) => score(b) - score(a))[0]!;
 }
 export function planTeamMovement(state: GameState, team: Team): TacticalIntent[] {
+  const tuning=getTuning(state), sx=tuning.fieldWidth/32, sy=tuning.fieldHeight/20;
+  if(sx!==1 || sy!==1){
+    const normalized:GameState={...state,tuning:{...tuning,fieldWidth:32,fieldHeight:20},
+      players:state.players.map(p=>({...p,x:p.x/sx,y:p.y/sy,vx:p.vx/sx,vy:p.vy/sy})),
+      ball:{...state.ball,x:state.ball.x/sx,y:state.ball.y/sy,vx:state.ball.vx/sx,vy:state.ball.vy/sy}};
+    return planTeamMovement(normalized,team).map(t=>({...t,
+      x:clamp(t.x*sx,-tuning.fieldWidth/2+FIELD.playerRadius,tuning.fieldWidth/2-FIELD.playerRadius),
+      y:clamp(t.y*sy,-tuning.fieldHeight/2+FIELD.playerRadius,tuning.fieldHeight/2-FIELD.playerRadius)}));
+  }
   const sign = signFor(team);
   const owner = state.players.find(p => p.id === state.ball.ownerId);
   const origin = owner ?? state.ball;

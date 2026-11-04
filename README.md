@@ -28,6 +28,19 @@ Open http://127.0.0.1:3001. This does not merge or deploy the branch to main.
 
 Open `/squad.html` for the actual 3D squad shelf with front/three-quarter/back controls and phone-friendly individual focus. `/celebrations.html` rehearses the three five-second goal dances and visible return to kickoff. The earlier 2D concepts remain at `/toybox-concepts.html` and `/athletic-concepts.html`. Sound is optional: use **Sound on** and **Test sound** in the match. See `docs/spain-squad.md` for architecture and verification.
 
+## Live tuning and presentation preview
+`feature/live-tuning-presentation` adds smooth angular response and acceleration, distance-driven running with articulated knees/elbows, displacement-only ball rolling, and an opening run from the two dressing rooms. The match clock stays frozen until all eight players reach kickoff; the entrance can be paused.
+
+Open **Tuning lab** below the pitch to adjust eleven values during play: field length/width, goal width/height, running speed, sprint multiplier, shot/pass/keeper power, acceleration and turning response. Lower acceleration gives a gentler start; lower turning response gives smoother turns. Field geometry, physics, keeper positioning and tactical targets use the same validated settings. Changes preserve score and clock; **Reset tuning** restores defaults. Restart retains the current page's tuning, while reloading returns to defaults.
+
+Audio is off until enabled. Recorded human support cues (“Go!” / “Hurry up!”), impact foley, audience shot reactions and a larger goal cheer replace the old runtime speech/beeps. **Hear crowd** and **Hear goal music** audition the new recordings and original 4.35-second instrumental without changing the score. Pause, mute, hide and restart cancel active and pending audio. See the in-game **Audio credits** and `public/audio-v2/CREDITS.md` for source attribution and licences. Instrumental music is synthesized, not human-recorded.
+
+After building, run an isolated preview without touching production:
+```sh
+PORT=3002 DATA_DIR="D:/SloppySoccer/Game/.local-server/presentation-preview-data" npm start
+```
+Open http://127.0.0.1:3002. The preview is a session background process, not a Windows startup service. No merge, push or activation is implied by running it. The architect coordinated mechanics, visual, audio and QA workers, each explicitly pinned to `openai-codex` / `gpt-6.1-sol` / low reasoning; the shared contract is `docs/presentation-tuning-contract.md`.
+
 ## Development
 ```sh
 npm run dev:server   # API on localhost:3000

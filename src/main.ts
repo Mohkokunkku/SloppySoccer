@@ -1,6 +1,10 @@
 import './style.css';
 import './international.css';
+import './tuning-panel.css';
+import {applyTuning,DEFAULT_TUNING,sanitizeTuning} from '../shared/tuning';
+import {mountTuningPanel} from './tuning-panel';
 import {GameAudio} from './audio';
+import {suspendGame} from './suspension';
 import {DANCE_NAMES,celebrationStyle} from './celebrations';
 import { createGame, startGame, stepGame } from '../shared/engine';
 import { DEFAULT_CONFIG, type MatchConfig, type MatchResult } from '../shared/types';
@@ -62,6 +66,8 @@ app.innerHTML = `
         <button class="quiet-button touch-toggle" id="touch-toggle" type="button" aria-pressed="false" aria-controls="touch-controls">Touch controls</button>
       </div>
       <div class="match-extras"><span class="role-legend">A Attacker &nbsp; M Midfield &nbsp; D Defender &nbsp; GK Keeper</span><button id="sound-toggle" type="button" class="quiet-button" aria-pressed="false">Sound off</button><button id="sound-test" type="button" class="quiet-button">Test sound</button><a href="/celebrations.html">Preview goal dances</a><span id="audio-status" role="status"></span></div>
+      <div class="match-extras"><button id="sound-crowd" type="button" class="quiet-button">Hear crowd</button><button id="sound-goal" type="button" class="quiet-button">Hear goal music</button><details class="audio-credits"><summary>Audio credits</summary><p>Crowd: “Free Crowd Cheering Sounds” by Gregor Quendel, CC BY 4.0 (edited excerpts). Human voices and impacts: Kenney, CC0. Goal music: original synthesized instrumental. <a href="/audio-v2/CREDITS.md" target="_blank" rel="noopener">Sources, changes and licences</a></p></details></div>
+      <div id="tuning-host"></div>
       <div class="touch-controls" id="touch-controls" aria-label="Touch game controls" hidden>
         <div class="dpad" role="group" aria-label="Move player">
           <button class="up" type="button" data-code="ArrowUp" aria-label="Move up">↑</button>
@@ -98,7 +104,9 @@ const stepper = new FixedStepper();
 const saves = new SaveOnce();
 const audio = new GameAudio();
 let config: MatchConfig = { ...DEFAULT_CONFIG };
-let state = createGame(config);
+let tuning = {...DEFAULT_TUNING};
+function configuredGame(settings:MatchConfig){const next=createGame(settings);applyTuning(next,tuning);return next;}
+let state = configuredGame(config);
 let paused = false;
 let renderer: ToyRenderer | null = null;
 let lastFrame = 0;
@@ -170,17 +178,17 @@ function clearInput(): void {
 function beginMatch(): void {
   if (!renderer) return;
   config = selectedConfig();
-  state = createGame(config); // IDs stay stable; the renderer reuses its eight rigs.
+  state = configuredGame(config); // IDs stay stable; the renderer reuses its eight rigs.
   currentMatch = `match-${Date.now()}-${++matchNumber}`;
   finishedHandled = false;
   paused = false;
   clearInput();
   audio.reset();void audio.unlock();
-  startGame(state);
+  startGame(state,true);
   updateUI(); focusPitch();
 }
 function setPaused(value: boolean, moveFocus = true): void {
-  if (state.phase !== 'playing' && state.phase !== 'goal' && state.phase !== 'resetting') return;
+  if (state.phase !== 'playing' && state.phase !== 'goal' && state.phase !== 'resetting' && state.phase !== 'entering') return;
   paused = value;if(paused)audio.quiet();clearInput(); updateUI();
   if (moveFocus) {
     if (paused) element('resume').focus({ preventScroll: true });
@@ -188,7 +196,7 @@ function setPaused(value: boolean, moveFocus = true): void {
   }
 }
 function resetSetup(): void {
-  state = createGame(config); paused = false; finishedHandled = false;
+  audio.quiet();state = configuredGame(config); paused = false; finishedHandled = false;
   clearInput(); updateUI(); element('start').focus({ preventScroll: true });
 }
 function setText(node: HTMLElement, value: string): void {
@@ -203,18 +211,19 @@ function updateUI(): void {
   const hint = roleHint(selectedRole);
   if (element('controlled-role').title !== hint) element('controlled-role').title = hint;
   const view = matchPresentation(state.phase, paused, state.score.home, state.score.away);
-  const phaseLabel = paused ? 'Paused' : state.phase === 'ready' ? 'Kick-off' : state.phase === 'finished' ? 'Full time' : state.phase === 'goal' ? 'Goal!' : state.phase==='resetting'?'Back to kick-off':'In play';
+  const phaseLabel = paused ? 'Paused' : state.phase === 'ready' ? 'Kick-off' : state.phase === 'entering' ? 'Teams entering' : state.phase === 'finished' ? 'Full time' : state.phase === 'goal' ? 'Goal!' : state.phase==='resetting'?'Back to kick-off':'In play';
   setText(element('phase-label'), phaseLabel);
   const goal = element('goal-banner');
-  goal.hidden = state.phase !== 'goal' || paused;
+  goal.hidden = (state.phase !== 'goal' && state.phase !== 'entering') || paused;
   const teamName=state.lastScorer==='home'?'Spain':'Argentina';
-  const goalText = teamName+' scores! '+DANCE_NAMES[celebrationStyle(state.score.home+state.score.away)];
+  const goalText = state.phase==='entering'?'Spain and Argentina take the field':teamName+' scores! '+DANCE_NAMES[celebrationStyle(state.score.home+state.score.away)];
   if (goal.textContent !== goalText) goal.textContent = goalText;
   goal.classList.toggle('cobalt-goal', state.lastScorer === 'away');
-  pauseButton.disabled = !renderer || (state.phase !== 'playing' && state.phase !== 'goal' && state.phase !== 'resetting');
+  goal.classList.toggle('entry-banner',state.phase==='entering');
+  pauseButton.disabled = !renderer || (state.phase !== 'playing' && state.phase !== 'goal' && state.phase !== 'resetting' && state.phase !== 'entering');
   setText(pauseButton, paused ? 'Resume' : 'Pause');
   restartButton.disabled = !renderer || state.phase === 'ready';
-  const soundButton=element<HTMLButtonElement>('sound-toggle');setText(soundButton,audio.enabled?'Sound on':'Sound off');soundButton.setAttribute('aria-pressed',String(audio.enabled));soundButton.dataset.played=String(audio.played);setText(element('audio-status'),audio.lastError??'');
+  const soundButton=element<HTMLButtonElement>('sound-toggle');setText(soundButton,audio.enabled?'Sound on':'Sound off');soundButton.setAttribute('aria-pressed',String(audio.enabled));soundButton.dataset.played=String(audio.played);soundButton.dataset.active=String(audio.activeCount);soundButton.dataset.pending=String(audio.pendingCount);setText(element('audio-status'),audio.lastError??'');
   if (view.overlay === lastView) return;
   lastView = view.overlay;
   panel.hidden = view.overlay === 'none';
@@ -265,7 +274,7 @@ async function finishMatch(): Promise<void> {
 setup.addEventListener('submit', event => { event.preventDefault(); settingsTouched = true; beginMatch(); });
 setup.addEventListener('change', () => {
   settingsTouched = true; config = selectedConfig();
-  if (state.phase === 'ready') { state = createGame(config); updateUI(); }
+  if (state.phase === 'ready') { state = configuredGame(config); updateUI(); }
 });
 pauseButton.addEventListener('click', () => setPaused(!paused));
 element('resume').addEventListener('click', () => setPaused(false));
@@ -275,6 +284,9 @@ element('rematch').addEventListener('click', beginMatch);
 element('new-setup').addEventListener('click', resetSetup);
 element('sound-toggle').addEventListener('click',()=>{audio.setEnabled(!audio.enabled);updateUI();});
 element('sound-test').addEventListener('click',()=>{audio.demo();updateUI();});
+element('sound-crowd').addEventListener('click',()=>{if(!audio.enabled)audio.setEnabled(true);audio.play('crowd-shot');updateUI();});
+element('sound-goal').addEventListener('click',()=>{if(!audio.enabled)audio.setEnabled(true);audio.play('goal');updateUI();});
+mountTuningPanel(element('tuning-host'),()=>tuning,patch=>{tuning=sanitizeTuning(patch,tuning);applyTuning(state,tuning);updateUI();},focusPitch);
 window.addEventListener('pagehide',()=>audio.quiet());
 
 const gameKeys = new Set(['KeyW', 'KeyA', 'KeyS', 'KeyD', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space', 'KeyE', 'KeyQ', 'ShiftLeft', 'ShiftRight']);
@@ -289,7 +301,7 @@ window.addEventListener('keydown', event => {
   }
 });
 window.addEventListener('keyup', event => input.keyUp(event.code));
-function suspend(): void { clearInput(); setPaused(true, false); }
+function suspend(): void { suspendGame(audio, clearInput, setPaused); }
 window.addEventListener('blur', suspend);
 document.addEventListener('visibilitychange', () => { if (document.hidden) suspend(); });
 
@@ -355,7 +367,7 @@ try {
 readLocalResults(); renderResults();
 void requestJSON('/api/config').then(value => {
   if (!settingsTouched && state.phase === 'ready') {
-    config = sanitizeConfig(value); applyConfig(); state = createGame(config); updateUI();
+    config = sanitizeConfig(value); applyConfig(); state = configuredGame(config); updateUI();
   }
 }).catch(() => { /* Built-in defaults are always playable. */ });
 void requestJSON('/api/results').then(value => {

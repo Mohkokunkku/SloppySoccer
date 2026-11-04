@@ -345,7 +345,9 @@ describe('movement', () => {
     stepGame(diagonal, input({ moveX: 1, moveY: 1 }), frame);
     expect(a.x).toBeGreaterThan(x);
     expect(Math.hypot(b.x - x, b.y - y)).toBeCloseTo(a.x - x);
-    expect(b.facing).toBeCloseTo(Math.PI / 4);
+    expect(b.facing).toBeGreaterThan(0);
+    expect(b.facing).toBeLessThan(Math.PI / 4);
+    expect(b.facing).toBeLessThanOrEqual(7 * frame + 1e-9);
     expect(diagonal.ball.x).toBeGreaterThan(b.x);
     expect(Math.hypot(diagonal.ball.x - b.x, diagonal.ball.y - b.y)).toBeLessThan(1.2);
     a.x = FIELD.width / 2 - FIELD.playerRadius;
@@ -444,8 +446,16 @@ describe('role-aware AI movement', () => {
   it('hands control over immediately without AI moving the selected defender', () => {
     const state=play(); stepGame(state,input(),frame);
     state.controlledId='home-2';
+    const defender=state.players[2]!;
+    const before={vx:defender.vx,vy:defender.vy};
+    const isolated=structuredClone(state);isolated.players=[isolated.players[2]!];
     stepGame(state,input({moveY:1}),frame);
-    expect(state.players[2]!.vx).toBe(0); expect(state.players[2]!.vy).toBeCloseTo(5.6);
+    stepGame(isolated,input({moveY:1}),frame);
+    // Existing inertia eases toward user input; no AI velocity is added after selection.
+    expect(defender.vx).toBeCloseTo(isolated.players[0]!.vx);
+    expect(defender.vy).toBeCloseTo(isolated.players[0]!.vy);
+    expect(defender.vy).toBeGreaterThan(before.vy);
+    expect(Math.hypot(defender.vx-before.vx,defender.vy-before.vy)).toBeLessThanOrEqual(24*frame+1e-9);
     expect(state.players[0]!.vx).toBeGreaterThan(0);
     expect(state.players[2]!.tacticalRole).toBe('defender');
   });

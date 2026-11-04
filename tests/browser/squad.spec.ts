@@ -119,7 +119,7 @@ test.describe('production Spain squad', () => {
     };
     await expectCharacters();
     await page.locator('#start').click();
-    await expect(page.locator('#phase-label')).toHaveText('In play');
+    await expect(page.locator('#phase-label')).toHaveText('In play', {timeout:30_000});
     await expect(page.locator('#pause')).toBeEnabled();
     // A ticking clock proves the real match loop advances, not only an overlay toggle.
     const initialClock = await page.locator('#clock').innerText();

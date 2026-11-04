@@ -1,0 +1,10 @@
+import {describe,it,expect} from 'vitest';
+import {createGame} from './engine.js';
+import {DEFAULT_TUNING,TUNING_LIMITS,sanitizeTuning,getTuning,applyTuning} from './tuning.js';
+describe('safe live tuning',()=>{
+ it('defaults remain the shipped field and powers',()=>{expect(DEFAULT_TUNING.fieldWidth).toBe(32);expect(DEFAULT_TUNING.goalWidth).toBe(7);expect(DEFAULT_TUNING.kickPower).toBe(22);expect(getTuning({})).toEqual(DEFAULT_TUNING);});
+ it('sanitizes finite numeric values without mutating the defaults',()=>{const result=sanitizeTuning({fieldWidth:1000,runSpeed:NaN,passPower:'20',turnRate:-1});expect(result.fieldWidth).toBe(TUNING_LIMITS.fieldWidth.max);expect(result.runSpeed).toBe(DEFAULT_TUNING.runSpeed);expect(result.passPower).toBe(DEFAULT_TUNING.passPower);expect(result.turnRate).toBe(TUNING_LIMITS.turnRate.min);expect(DEFAULT_TUNING.fieldWidth).toBe(32);});
+ it('keeps earlier live changes when one lever changes',()=>{const base=sanitizeTuning({fieldWidth:40,runSpeed:7});const next=sanitizeTuning({kickPower:30},base);expect(next.fieldWidth).toBe(40);expect(next.runSpeed).toBe(7);expect(next.kickPower).toBe(30);});
+ it('clamps shrunk geometry safely without scoring or resetting match progress',()=>{const state=createGame();state.phase='playing';state.elapsed=12;state.timeRemaining=108;state.score.home=2;state.players[0].x=15;state.players[0].y=9;state.ball.x=15;state.ball.y=9;state.ball.vx=20;state.ball.ownerId=null;applyTuning(state,{fieldWidth:20,fieldHeight:12});expect(state.players[0].x).toBeLessThanOrEqual(9.38);expect(state.players[0].y).toBeLessThanOrEqual(5.38);expect(state.ball.x).toBeLessThanOrEqual(9.72);expect(state.ball.y).toBeLessThanOrEqual(5.72);expect(state.ball.vx).toBe(0);expect(state.score.home).toBe(2);expect(state.elapsed).toBe(12);expect(state.timeRemaining).toBe(108);expect(state.phase).toBe('playing');});
+ it('power-only edits do not teleport an active shot',()=>{const state=createGame();state.ball.ownerId=null;state.ball.x=17;state.ball.vx=20;applyTuning(state,{kickPower:28});expect(state.ball.x).toBe(17);expect(state.ball.vx).toBe(20);});
+});

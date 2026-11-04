@@ -1,0 +1,65 @@
+{
+  "assets": [
+    {
+      "file": "crowd-goal.wav",
+      "bytes": 225678,
+      "duration": 4.7,
+      "channels": 1,
+      "sampleRate": 24000,
+      "rms": 0.0824,
+      "peak": 0.47479,
+      "sha256": "d3d062af00ce4984f4932a5f52e8868de7b7c99badedb3a2588664092e64c99f"
+    },
+    {
+      "file": "crowd-shot.wav",
+      "bytes": 115278,
+      "duration": 2.4,
+      "channels": 1,
+      "sampleRate": 24000,
+      "rms": 0.0648,
+      "peak": 0.38831,
+      "sha256": "2ce474b908c2eb1e279945a9a29b33766b0f511da08dc28a4bcbb05e32f669db"
+    },
+    {
+      "file": "goal-music.wav",
+      "bytes": 417644,
+      "duration": 4.35,
+      "channels": 2,
+      "sampleRate": 24000,
+      "rms": 0.12837,
+      "peak": 0.74368,
+      "sha256": "56c2b6d68990ec2b1b60b89689956f219067c101f89d1d2daed2eac5bdc8f791"
+    },
+    {
+      "file": "kick.wav",
+      "bytes": 18318,
+      "duration": 0.38,
+      "channels": 1,
+      "sampleRate": 24000,
+      "rms": 0.11229,
+      "peak": 0.59985,
+      "sha256": "619780aa7af619db0c4110a0b564e0b5eb05c0df3d3921a31812b3137ff91112"
+    },
+    {
+      "file": "voice-go.wav",
+      "bytes": 31322,
+      "duration": 0.651,
+      "channels": 1,
+      "sampleRate": 24000,
+      "rms": 0.11165,
+      "peak": 0.535,
+      "sha256": "7fa21a36790b4b0b063c3d32e42fca8c4508c442e0d868255c0db2aff0f2d4c0"
+    },
+    {
+      "file": "voice-yes.wav",
+      "bytes": 34930,
+      "duration": 0.726,
+      "channels": 1,
+      "sampleRate": 24000,
+      "rms": 0.07509,
+      "peak": 0.43768,
+      "sha256": "50c8f23d29a497c203e3048913fed30a38d6d2bbe0d8b975041e0d4c4f902cb2"
+    }
+  ],
+  "credits": "CREDITS.md"
+}
