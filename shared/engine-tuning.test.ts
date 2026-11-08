@@ -5,7 +5,7 @@ import {EMPTY_INPUT} from './types.js';
 import {planTeamMovement} from './tactics.js';
 it('uses live geometry for kickoff, tactical targets, walls and scoring height',()=>{
  const s=createGame();applyTuning(s,{fieldWidth:20,fieldHeight:12,goalWidth:4,goalHeight:1.5});startGame(s);
- expect(kickoffPosition('home',2,'home',getTuning(s))).toEqual({x:-6.25,y:3});
+ expect(kickoffPosition('home',2,'home',getTuning(s))).toEqual({x:-6.25,y:-2.7});
  for(const t of planTeamMovement(s,'away')){expect(Math.abs(t.x)).toBeLessThanOrEqual(9.38);expect(Math.abs(t.y)).toBeLessThanOrEqual(5.38);}
  s.players.forEach(p=>{p.x=-7;p.y=5;});Object.assign(s.ball,{ownerId:null,x:9.7,y:0,z:2,vz:0,vx:20,vy:0});stepGame(s,EMPTY_INPUT,.05);expect(s.ball.vx).toBeLessThan(0);expect(s.score.home).toBe(0);
  Object.assign(s.ball,{ownerId:null,x:10.4,y:0,z:0,vz:0,vx:1,vy:0});stepGame(s,EMPTY_INPUT,.01);expect(s.score.home).toBe(1);

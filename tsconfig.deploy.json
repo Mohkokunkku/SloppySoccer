@@ -1,0 +1,13 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": false,
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "rootDir": "deployment",
+    "outDir": ".local-server/github-deploy/candidate",
+    "types": ["node"]
+  },
+  "include": ["deployment/runtime.ts", "deployment/watcher.ts"],
+  "exclude": ["**/*.test.ts", "deployment/vitest.config.ts"]
+}

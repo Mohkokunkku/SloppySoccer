@@ -1,0 +1,26 @@
+/* Local-party setup extends the existing toybox layout, not player-label spacing. */
+select {font:inherit;color:var(--ink);background:var(--paper);border:1px solid #a8a395;border-radius:4px;min-height:38px;padding:5px 7px;max-width:100%;outline-offset:3px;}
+select:focus-visible {outline:3px solid var(--cobalt);}
+#setup {display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:0 14px;}
+#setup .formation-field,#local-lobby-host,#start {grid-column:1/-1;}
+.formation-options {display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:10px;}
+.formation-options label {display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:bold;min-width:0;}
+.formation-options select {width:100%;font-size:12px;}
+.stage.is-setup.has-overlay {height:auto;min-height:640px;grid-template-columns:minmax(0,1fr) minmax(340px,440px);align-items:start;}
+.stage.is-setup .pitch {height:min(65vh,740px);min-height:470px;position:sticky;top:8px;}
+.stage.is-setup .match-panel {padding:24px;align-self:start;}
+.stage.is-setup .match-panel>p {max-width:none;margin-bottom:18px;}
+.stage.is-setup .match-panel h1 {font-size:34px;max-width:none;}
+#local-lobby {margin:0 0 16px;}
+#local-lobby-help {font-size:12px;}
+#local-lobby .local-seat {gap:6px;grid-template-columns:auto minmax(65px,1fr) minmax(105px,1.6fr);}
+#local-lobby .local-seat-status:empty {display:none;}
+#local-lobby .local-seat-status {font-size:11px;}
+#local-lobby .local-seat label,#local-lobby select {font-size:12px;}
+#local-lobby .local-seat label:first-child {max-width:68px;}
+#local-team-note {white-space:normal;overflow-wrap:anywhere;}
+.local-input-status {background:var(--ivory);font-size:13px;line-height:1.5;color:var(--muted);padding:6px 20px 10px;}
+.local-input-status:empty {display:none;}
+@media(max-width:1100px) {.matchbar {position:relative;flex-wrap:wrap;min-height:108px;justify-content:center;padding:0 6px 4px;}.scoreboard {position:static;transform:none;order:-1;flex-basis:100%;justify-content:center;min-height:60px;}.matchbar .quiet-button {min-height:42px;}.stage.is-setup.has-overlay {grid-template-columns:minmax(0,1fr) 370px;}.stage.is-setup .match-panel {padding:20px 16px;}}
+@media(max-width:900px) {.stage.is-setup.has-overlay {display:flex;flex-direction:column;min-height:0;}.stage.is-setup .pitch {width:100%;position:relative;top:auto;min-height:0;height:clamp(300px,54vw,430px);}.stage.is-setup .match-panel {align-self:stretch;display:block;border-top:1px solid var(--rule);padding:22px;}.stage.is-setup .match-panel h1 {font-size:32px;}.stage.is-setup .match-panel>p {margin-bottom:20px;}#local-lobby .local-seat {grid-template-columns:100px minmax(80px,1fr) minmax(130px,1.5fr);}#local-lobby .local-seat label:first-child {max-width:none;}}
+@media(max-width:480px) {.stage.is-setup .pitch {height:clamp(245px,68vw,320px);}.stage.is-setup .match-panel {padding:18px 14px;}.stage.is-setup .match-panel h1 {font-size:28px;}.formation-options {gap:8px;}#setup {gap:0 10px;}#local-lobby .local-seat {grid-template-columns:80px minmax(0,1fr);gap:7px;}#local-lobby .local-seat>label:last-of-type {grid-column:1/-1;display:grid;grid-template-columns:70px minmax(0,1fr);}#local-lobby .local-seat>label:nth-child(2) {display:grid;grid-template-columns:40px minmax(0,1fr);}.local-input-status {padding:6px 14px 10px;}.matchbar .quiet-button {font-size:12px;padding:8px 6px;}}

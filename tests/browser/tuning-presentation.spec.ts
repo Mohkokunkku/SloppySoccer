@@ -1,5 +1,6 @@
 import { test as base, expect, type Page } from '@playwright/test';
 import { DEFAULT_TUNING, TUNING_LIMITS } from '../../shared/tuning';
+import { waitForPartyPlay } from './party-helpers';
 
 // Real production server from playwright.config.ts. No routes, engine mutations,
 // synthetic goals, fake timers, or replacement audio/WebGL implementations.
@@ -32,8 +33,7 @@ async function start(page: Page): Promise<void> {
 }
 
 async function playing(page: Page): Promise<void> {
-  await expect(page.locator('#pitch')).toHaveAttribute('data-phase', 'playing', { timeout: 30_000 });
-  await expect(page.locator('#phase-label')).toHaveText('In play');
+  await waitForPartyPlay(page);
 }
 
 async function snapshot(page: Page) {
@@ -90,7 +90,7 @@ test('entrance freezes the clock, pauses all motion, and resumes into a ticking 
     document.querySelector<HTMLButtonElement>('#pause')!.click();
   });
   await expect(page.locator('#pitch')).toHaveAttribute('data-phase','entering');
-  await expect(page.locator('#pitch')).toHaveAttribute('data-entry-count', /[1-8]/);
+  await expect(page.locator('#pitch')).toHaveAttribute('data-entry-count', /^(?:[1-9]|10)$/);
   await expect(page.locator('#clock')).toHaveText(initialClock);
   await expect(page.locator('#phase-label')).toHaveText('Paused');
   // Let the frame that presents the pause settle before comparing actual state.
@@ -103,7 +103,7 @@ test('entrance freezes the clock, pauses all motion, and resumes into a ticking 
   await playing(page);
   await expect(page.locator('#pitch')).toHaveAttribute('data-entry-count', '0');
   await expect(page.locator('#clock')).not.toHaveText(initialClock, { timeout: 5000 });
-  await expect(page.locator('.role-marker[data-player]')).toHaveCount(8);
+  await expect(page.locator('.role-marker[data-player]')).toHaveCount(10);
 });
 
 test('live geometry preserves an existing match and rebuilds only geometry', async ({ page }) => {
@@ -126,7 +126,7 @@ test('live geometry preserves an existing match and rebuilds only geometry', asy
     const current = await snapshot(page);
     expect([current.clock, current.home, current.away]).toEqual([before.clock, before.home, before.away]);
     await expect(page.locator('#phase-label')).toHaveText('Paused');
-    await expect(page.locator('.role-marker[data-player]')).toHaveCount(8);
+    await expect(page.locator('.role-marker[data-player]')).toHaveCount(10);
     await expect(page.locator('#pitch canvas')).toHaveCount(1);
   }
   expect(Number(await pitch.getAttribute('data-board-rebuilds'))).toBeGreaterThan(rebuilds);

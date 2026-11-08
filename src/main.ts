@@ -1,20 +1,28 @@
 import './style.css';
 import './international.css';
 import './tuning-panel.css';
+import './local-party.css';
 import {applyTuning,DEFAULT_TUNING,sanitizeTuning} from '../shared/tuning';
 import {mountTuningPanel} from './tuning-panel';
 import {GameAudio} from './audio';
 import {suspendGame} from './suspension';
 import {DANCE_NAMES,celebrationStyle} from './celebrations';
-import { createGame, startGame, stepGame } from '../shared/engine';
-import { DEFAULT_CONFIG, type MatchConfig, type MatchResult } from '../shared/types';
-import { InputController } from './input';
+import { createGame, startGame, skipIntro } from '../shared/engine';
+import { stepQueuedGame } from './queued-game-step';
+import { DEFAULT_CONFIG, type MatchConfig, type MatchResult, type LocalSeat } from '../shared/types';
+import { assignLocalControls, humanControls } from '../shared/local-controls';
+import { sanitizeFormations } from '../shared/formations';
+import { LocalInputHub } from './local-input';
+import { LocalInputQueue } from './local-input-queue';
+import { mountLocalLobby } from './local-lobby';
 import { FixedStepper } from './loop';
 import { formatTime, matchPresentation, sanitizeConfig, SaveOnce } from './model';
 import { ToyRenderer } from './renderer';
 import { mergeResults, parseResults } from './results';
 import { completedPayload, controlledRoleLabel } from './ui';
 import { roleHint } from './role-hint';
+import {localControlGuide,selectedLocalConfig} from './local-config';
+import { PhaseAnnouncement } from './phase-announcement';
 
 const app = document.querySelector<HTMLDivElement>('#app');
 if (!app) throw new Error('Missing app root');
@@ -22,7 +30,7 @@ app.innerHTML = `
   <main class="workshop">
     <header class="masthead">
       <a class="wordmark" href="/" aria-label="Sloppy Soccer home">Sloppy<span>Soccer<span class="logo-ball" aria-hidden="true">✳</span></span></a>
-      <p class="tagline">Spain vs Argentina · Toybox preview</p>
+      <p class="tagline">Spain vs Argentina · Local party</p>
       <a class="design-link" href="/squad.html">Meet Spain's squad <span aria-hidden="true">↗</span></a>
     </header>
     <section class="game-box" aria-label="Sloppy Soccer game">
@@ -34,14 +42,16 @@ app.innerHTML = `
         </div>
         <button class="quiet-button" id="pause" type="button" disabled>Pause</button>
         <button class="quiet-button" id="restart" type="button" disabled>Restart</button>
+        <button class="quiet-button" id="change-players" type="button" disabled>Change players</button>
+        <button class="quiet-button" id="skip-intro" type="button" hidden>Skip intro</button>
       </div>
       <div class="stage has-overlay" id="stage">
         <div class="pitch" id="pitch"></div>
         <p class="goal-banner" id="goal-banner" role="status" hidden></p>
         <aside class="match-panel" id="match-panel" aria-labelledby="panel-title">
-          <div class="toy-label" aria-hidden="true">4-a-side tabletop football</div>
+          <div class="toy-label" aria-hidden="true">5-a-side tabletop football</div>
           <h1 id="panel-title">Small teams.<br>Big nonsense.</h1>
-          <p id="panel-copy">You're Spain. Take the little legs to the right-hand goal.</p>
+          <p id="panel-copy">Pick your teams and devices. Share a team or go head-to-head on this screen.</p>
           <form id="setup">
             <fieldset><legend>Opposition</legend><div class="choices">
               <label><input type="radio" name="difficulty" value="easy"><span>Easy</span></label>
@@ -53,6 +63,11 @@ app.innerHTML = `
               <label><input type="radio" name="duration" value="120" checked><span>2 min</span></label>
               <label><input type="radio" name="duration" value="180"><span>3 min</span></label>
             </div></fieldset>
+            <fieldset class="formation-field"><legend>Team tactics · four outfield + keeper</legend><div class="formation-options">
+              <label for="formation-home">Spain tactic<select id="formation-home"><option value="2-1-1">2 DEF · 1 MID · 1 ATT</option><option value="1-2-1">1 DEF · 2 MID · 1 ATT</option></select></label>
+              <label for="formation-away">Argentina tactic<select id="formation-away"><option value="2-1-1">2 DEF · 1 MID · 1 ATT</option><option value="1-2-1">1 DEF · 2 MID · 1 ATT</option></select></label>
+            </div></fieldset>
+            <div id="local-lobby-host"></div>
             <button class="primary-button" id="start" type="submit">Start match <span aria-hidden="true">▶</span></button>
           </form>
           <div id="paused-actions" hidden><button class="primary-button" id="resume" type="button">Resume match <span aria-hidden="true">▶</span></button><button class="secondary-button" id="paused-restart" type="button">Restart match</button></div>
@@ -60,11 +75,12 @@ app.innerHTML = `
         </aside>
       </div>
       <div class="control-strip">
-        <p class="team-note"><span class="team-dot" aria-hidden="true"></span> You play Spain <span aria-hidden="true">→</span></p>
+        <p class="team-note" id="local-team-note">P1 Spain →</p>
         <p class="team-note" aria-live="polite">Selected: <span id="controlled-role">Attacker</span></p>
-        <div class="keyboard-guide" aria-label="Keyboard controls"><span><kbd>WASD</kbd> / <kbd>↑↓←→</kbd> Move</span><span><kbd>Space</kbd> Shoot</span><span><kbd>E</kbd> Pass</span><span><kbd>Q</kbd> Switch</span><span><kbd>Shift</kbd> Sprint</span><span><kbd>Esc</kbd> Pause</span></div>
+        <div class="keyboard-guide" id="local-control-guide" aria-label="Active local player controls"></div>
         <button class="quiet-button touch-toggle" id="touch-toggle" type="button" aria-pressed="false" aria-controls="touch-controls">Touch controls</button>
       </div>
+      <p id="local-input-status" class="local-input-status" role="status"></p>
       <div class="match-extras"><span class="role-legend">A Attacker &nbsp; M Midfield &nbsp; D Defender &nbsp; GK Keeper</span><button id="sound-toggle" type="button" class="quiet-button" aria-pressed="false">Sound off</button><button id="sound-test" type="button" class="quiet-button">Test sound</button><a href="/celebrations.html">Preview goal dances</a><span id="audio-status" role="status"></span></div>
       <div class="match-extras"><button id="sound-crowd" type="button" class="quiet-button">Hear crowd</button><button id="sound-goal" type="button" class="quiet-button">Hear goal music</button><details class="audio-credits"><summary>Audio credits</summary><p>Crowd: “Free Crowd Cheering Sounds” by Gregor Quendel, CC BY 4.0 (edited excerpts). Human voices and impacts: Kenney, CC0. Goal music: original synthesized instrumental. <a href="/audio-v2/CREDITS.md" target="_blank" rel="noopener">Sources, changes and licences</a></p></details></div>
       <div id="tuning-host"></div>
@@ -83,7 +99,7 @@ app.innerHTML = `
       <ol class="results-list" id="results-list"></ol>
       <p class="empty-results" id="empty-results">No final whistles yet. Your first match starts above.</p>
     </section>
-    <footer class="page-footer"><p>Eight tiny players. One very serious ball.</p><span>Made for a quick kickabout.</span></footer>
+    <footer class="page-footer"><p>Ten tiny players. One very serious ball.</p><span>Up to four local players. One shared screen.</span></footer>
     <p class="sr-only" id="announcer" role="status" aria-live="polite"></p>
   </main>`;
 
@@ -99,13 +115,19 @@ const setup = element<HTMLFormElement>('setup');
 const pauseButton = element<HTMLButtonElement>('pause');
 const restartButton = element<HTMLButtonElement>('restart');
 const announcer = element('announcer');
-const input = new InputController();
+const phaseAnnouncement = new PhaseAnnouncement();
+const input = new LocalInputHub();
+const inputQueue = new LocalInputQueue();
 const stepper = new FixedStepper();
 const saves = new SaveOnce();
 const audio = new GameAudio();
 let config: MatchConfig = { ...DEFAULT_CONFIG };
 let tuning = {...DEFAULT_TUNING};
-function configuredGame(settings:MatchConfig){const next=createGame(settings);applyTuning(next,tuning);return next;}
+let localSeats:LocalSeat[]=[{id:'p1',team:'home',device:'keyboard1'}];
+let localLobby:ReturnType<typeof mountLocalLobby>|null=null;
+let lobbyLocked:boolean|null=null;
+let lastDeviceRefresh=0;
+function configuredGame(settings:MatchConfig){const next=createGame(settings);applyTuning(next,tuning);assignLocalControls(next,localSeats);return next;}
 let state = configuredGame(config);
 let paused = false;
 let renderer: ToyRenderer | null = null;
@@ -162,33 +184,40 @@ function renderResults(): void {
   element('empty-results').hidden = results.length > 0;
 }
 function selectedConfig(): MatchConfig {
-  const values = new FormData(setup);
-  return sanitizeConfig({ duration: values.get('duration'), difficulty: values.get('difficulty') });
+  return selectedLocalConfig(setup.querySelectorAll<HTMLInputElement>('input[type="radio"]'),{home:element<HTMLSelectElement>('formation-home').value,away:element<HTMLSelectElement>('formation-away').value});
 }
 function applyConfig(): void {
-  for (const field of setup.querySelectorAll<HTMLInputElement>('input')) {
+  for (const field of setup.querySelectorAll<HTMLInputElement>('input[type="radio"]')) {
     field.checked = field.value === String(config[field.name as keyof MatchConfig]);
   }
+  const formations=sanitizeFormations(config.formations);
+  element<HTMLSelectElement>('formation-home').value=formations.home;
+  element<HTMLSelectElement>('formation-away').value=formations.away;
 }
-function focusPitch(): void { pitch.querySelector('canvas')?.focus({ preventScroll: true }); }
+function focusPitch(): void { pitch.querySelector('canvas')?.focus({ preventScroll: true });stage.closest('.game-box')?.scrollIntoView({block:'start',behavior:'instant'}); }
 function clearInput(): void {
-  input.clear(); stepper.reset(); lastFrame = 0;
+  input.clear(); inputQueue.clear(); stepper.reset(); lastFrame = 0;
   document.querySelectorAll('.is-held').forEach(button => button.classList.remove('is-held'));
 }
 function beginMatch(): void {
   if (!renderer) return;
   config = selectedConfig();
-  state = configuredGame(config); // IDs stay stable; the renderer reuses its eight rigs.
+  localSeats=localLobby?.readSeats()??localSeats;
+  const pads=navigator.getGamepads?.()??[];
+  const unavailable=localSeats.filter(seat=>seat.device.startsWith('gamepad:')&&(!pads[Number(seat.device.slice(8))]?.connected||pads[Number(seat.device.slice(8))]?.mapping!=='standard'));
+  if(unavailable.length){setText(element('local-input-status'),`${unavailable.map(seat=>seat.id.toUpperCase()).join(', ')}: connect a standard-mapped controller and press a button, or choose a keyboard.`);return;}
+  input.setSeats(localSeats);
+  state = configuredGame(config); // Stable IDs; role/mould changes are renderer-owned.
   currentMatch = `match-${Date.now()}-${++matchNumber}`;
   finishedHandled = false;
   paused = false;
   clearInput();
   audio.reset();void audio.unlock();
-  startGame(state,true);
+  startGame(state,true,true);
   updateUI(); focusPitch();
 }
 function setPaused(value: boolean, moveFocus = true): void {
-  if (state.phase !== 'playing' && state.phase !== 'goal' && state.phase !== 'resetting' && state.phase !== 'entering') return;
+  if (state.phase !== 'playing' && state.phase !== 'goal' && state.phase !== 'resetting' && state.phase !== 'entering' && state.phase !== 'intro') return;
   paused = value;if(paused)audio.quiet();clearInput(); updateUI();
   if (moveFocus) {
     if (paused) element('resume').focus({ preventScroll: true });
@@ -207,11 +236,22 @@ function updateUI(): void {
   setText(element('away-score'), String(state.score.away));
   setText(element('clock'), formatTime(state.timeRemaining));
   setText(element('controlled-role'), controlledRoleLabel(state));
+  setText(element('local-team-note'),humanControls(state).map(control=>`${control.seatId.toUpperCase()} ${control.team==='home'?'Spain →':'Argentina ←'}`).join(' · '));
+  const guide=localControlGuide(localSeats);
+  setText(element('local-control-guide'),guide);
+  const canvas=pitch.querySelector('canvas');
+  const pitchLabel=`Sloppy Soccer tabletop pitch. ${guide}`;
+  if(canvas&&canvas.getAttribute('aria-label')!==pitchLabel)canvas.setAttribute('aria-label',pitchLabel);
+  const locked=state.phase!=='ready';
+  if(lobbyLocked!==locked){lobbyLocked=locked;localLobby?.setLocked(locked);for(const control of setup.querySelectorAll<HTMLInputElement|HTMLSelectElement>('input[type="radio"],#formation-home,#formation-away'))control.disabled=locked;}
+  stage.classList.toggle('is-setup',state.phase==='ready');
+  element<HTMLButtonElement>('change-players').disabled=!renderer||state.phase==='ready';
+  element('skip-intro').hidden=state.phase!=='intro'||paused;
   const selectedRole = state.players.find(player => player.id === state.controlledId)?.tacticalRole;
   const hint = roleHint(selectedRole);
   if (element('controlled-role').title !== hint) element('controlled-role').title = hint;
   const view = matchPresentation(state.phase, paused, state.score.home, state.score.away);
-  const phaseLabel = paused ? 'Paused' : state.phase === 'ready' ? 'Kick-off' : state.phase === 'entering' ? 'Teams entering' : state.phase === 'finished' ? 'Full time' : state.phase === 'goal' ? 'Goal!' : state.phase==='resetting'?'Back to kick-off':'In play';
+  const phaseLabel = paused ? 'Paused' : state.phase === 'ready' ? 'Kick-off' : state.phase === 'entering' ? 'Teams entering' : state.phase === 'intro' ? 'Team spotlight' : state.phase === 'finished' ? 'Full time' : state.phase === 'goal' ? 'Goal!' : state.phase==='resetting'?'Back to kick-off':'In play';
   setText(element('phase-label'), phaseLabel);
   const goal = element('goal-banner');
   goal.hidden = (state.phase !== 'goal' && state.phase !== 'entering') || paused;
@@ -220,10 +260,12 @@ function updateUI(): void {
   if (goal.textContent !== goalText) goal.textContent = goalText;
   goal.classList.toggle('cobalt-goal', state.lastScorer === 'away');
   goal.classList.toggle('entry-banner',state.phase==='entering');
-  pauseButton.disabled = !renderer || (state.phase !== 'playing' && state.phase !== 'goal' && state.phase !== 'resetting' && state.phase !== 'entering');
+  pauseButton.disabled = !renderer || (state.phase !== 'playing' && state.phase !== 'goal' && state.phase !== 'resetting' && state.phase !== 'entering' && state.phase !== 'intro');
   setText(pauseButton, paused ? 'Resume' : 'Pause');
   restartButton.disabled = !renderer || state.phase === 'ready';
   const soundButton=element<HTMLButtonElement>('sound-toggle');setText(soundButton,audio.enabled?'Sound on':'Sound off');soundButton.setAttribute('aria-pressed',String(audio.enabled));soundButton.dataset.played=String(audio.played);soundButton.dataset.active=String(audio.activeCount);soundButton.dataset.pending=String(audio.pendingCount);setText(element('audio-status'),audio.lastError??'');
+  const announcement = phaseAnnouncement.update(state, paused, element('local-team-note').textContent ?? '');
+  if (announcement !== null) setText(announcer, announcement);
   if (view.overlay === lastView) return;
   lastView = view.overlay;
   panel.hidden = view.overlay === 'none';
@@ -234,15 +276,13 @@ function updateUI(): void {
   const title = element('panel-title');
   title.textContent = view.overlay === 'ready' ? 'Small teams. Big nonsense.' : view.title;
   element('panel-copy').textContent = view.overlay === 'ready'
-    ? "You're Spain. Take the little legs to the right-hand goal."
+    ? 'Pick your teams and devices. Share a team or go head-to-head on this screen.'
     : view.overlay === 'paused' ? 'The little legs can wait. Pick up exactly where you left off.'
     : 'Full time. Same tiny pitch, one more big chance?';
   if (view.overlay === 'finished') {
     element('final-score').textContent = `Spain ${state.score.home} – ${state.score.away} Argentina`;
-    announcer.textContent = `Full time. Spain ${state.score.home}, Argentina ${state.score.away}. ${view.title}`;
     element('rematch').focus({ preventScroll: true });
-  } else if (view.overlay === 'paused') announcer.textContent = 'Match paused.';
-  else if (view.overlay === 'none') announcer.textContent = 'Match in play. You control Spain and attack right.';
+  }
 }
 async function finishMatch(): Promise<void> {
   const payload = completedPayload(state, config.duration);
@@ -274,6 +314,7 @@ async function finishMatch(): Promise<void> {
 setup.addEventListener('submit', event => { event.preventDefault(); settingsTouched = true; beginMatch(); });
 setup.addEventListener('change', () => {
   settingsTouched = true; config = selectedConfig();
+  localSeats=localLobby?.readSeats()??localSeats;input.setSeats(localSeats);
   if (state.phase === 'ready') { state = configuredGame(config); updateUI(); }
 });
 pauseButton.addEventListener('click', () => setPaused(!paused));
@@ -282,6 +323,13 @@ restartButton.addEventListener('click', beginMatch);
 element('paused-restart').addEventListener('click', beginMatch);
 element('rematch').addEventListener('click', beginMatch);
 element('new-setup').addEventListener('click', resetSetup);
+element('change-players').addEventListener('click',resetSetup);
+element('skip-intro').addEventListener('click',()=>{if(paused)return;skipIntro(state);clearInput();updateUI();focusPitch();});
+localLobby=mountLocalLobby(element('local-lobby-host'),seats=>{settingsTouched=true;localSeats=seats;input.setSeats(seats);if(state.phase==='ready'){state=configuredGame(config);updateUI();}});
+localSeats=localLobby.readSeats();input.setSeats(localSeats);
+const refreshDevices=()=>{localLobby?.refreshDevices();};
+window.addEventListener('gamepadconnected',refreshDevices);
+window.addEventListener('gamepaddisconnected',refreshDevices);
 element('sound-toggle').addEventListener('click',()=>{audio.setEnabled(!audio.enabled);updateUI();});
 element('sound-test').addEventListener('click',()=>{audio.demo();updateUI();});
 element('sound-crowd').addEventListener('click',()=>{if(!audio.enabled)audio.setEnabled(true);audio.play('crowd-shot');updateUI();});
@@ -289,15 +337,15 @@ element('sound-goal').addEventListener('click',()=>{if(!audio.enabled)audio.setE
 mountTuningPanel(element('tuning-host'),()=>tuning,patch=>{tuning=sanitizeTuning(patch,tuning);applyTuning(state,tuning);updateUI();},focusPitch);
 window.addEventListener('pagehide',()=>audio.quiet());
 
-const gameKeys = new Set(['KeyW', 'KeyA', 'KeyS', 'KeyD', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space', 'KeyE', 'KeyQ', 'ShiftLeft', 'ShiftRight']);
+const gameKeys = new Set(['KeyW', 'KeyA', 'KeyS', 'KeyD', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space', 'KeyE', 'KeyQ', 'ShiftLeft', 'ShiftRight','Enter','Slash','Period']);
 window.addEventListener('keydown', event => {
   const target = event.target as HTMLElement | null;
   if (target?.closest('input, select, textarea, [contenteditable="true"]')) return;
   if (event.code === 'Escape' && !event.repeat) { event.preventDefault(); setPaused(!paused); return; }
-  if (!paused && (state.phase === 'playing' || state.phase === 'goal') && gameKeys.has(event.code)) {
+  if (!paused && state.phase!=='ready' && state.phase!=='finished' && gameKeys.has(event.code)) {
     // Buttons keep their native Space/Enter activation for keyboard users.
-    if (target?.closest('button, a') && event.code === 'Space') return;
-    event.preventDefault(); input.keyDown(event.code);
+    if (target?.closest('button, a') && (event.code === 'Space'||event.code==='Enter')) return;
+    event.preventDefault(); input.keyDown(event.code, event.repeat);
   }
 });
 window.addEventListener('keyup', event => input.keyUp(event.code));
@@ -305,8 +353,9 @@ function suspend(): void { suspendGame(audio, clearInput, setPaused); }
 window.addEventListener('blur', suspend);
 document.addEventListener('visibilitychange', () => { if (document.hidden) suspend(); });
 
-for (const button of document.querySelectorAll<HTMLButtonElement>('[data-code]')) {
-  const code = button.dataset.code!;
+for (const [index,button] of [...document.querySelectorAll<HTMLButtonElement>('[data-code]')].entries()) {
+  const sourceCode = button.dataset.code!;
+  const code=({ArrowUp:'KeyW',ArrowDown:'KeyS',ArrowLeft:'KeyA',ArrowRight:'KeyD'}as Record<string,string>)[sourceCode]??sourceCode;
   button.addEventListener('pointerdown', event => {
     if (paused || state.phase !== 'playing' || (event.pointerType === 'mouse' && event.button !== 0)) return;
     event.preventDefault(); button.setPointerCapture(event.pointerId); input.pointerDown(event.pointerId, code);
@@ -318,15 +367,15 @@ for (const button of document.querySelectorAll<HTMLButtonElement>('[data-code]')
   button.addEventListener('lostpointercapture', release);
   button.addEventListener('contextmenu', event => event.preventDefault());
   button.addEventListener('keydown', event => {
-    if (event.code === 'Space' || event.code === 'Enter') { event.preventDefault(); if (!paused && state.phase === 'playing') input.keyDown(code); }
+    if (event.code === 'Space' || event.code === 'Enter') { event.preventDefault(); if (!paused && state.phase === 'playing') input.pointerDown(-index-1,code); }
   });
-  button.addEventListener('keyup', event => { if (event.code === 'Space' || event.code === 'Enter') { event.preventDefault(); input.keyUp(code); } });
-  button.addEventListener('blur', () => input.keyUp(code));
+  button.addEventListener('keyup', event => { if (event.code === 'Space' || event.code === 'Enter') { event.preventDefault(); input.pointerUp(-index-1); } });
+  button.addEventListener('blur', () => input.pointerUp(-index-1));
 }
 const touchToggle = element<HTMLButtonElement>('touch-toggle');
 const touchControls = element('touch-controls');
 function showTouch(show: boolean): void {
-  touchControls.hidden = !show; touchToggle.setAttribute('aria-pressed', String(show)); input.clear();
+  touchControls.hidden = !show; touchToggle.setAttribute('aria-pressed', String(show)); clearInput();
 }
 showTouch(window.matchMedia('(pointer: coarse)').matches);
 touchToggle.addEventListener('click', () => showTouch(Boolean(touchControls.hidden)));
@@ -350,8 +399,22 @@ try {
   renderer.start(now => {
     const delta = lastFrame ? (now - lastFrame) / 1000 : 0;
     lastFrame = now;
-    if (!paused && !document.hidden && state.phase !== 'ready' && state.phase !== 'finished') {
-      stepper.advance(delta, dt => {stepGame(state, input.consume(), dt, config);audio.update(state);});
+    if(state.phase==='ready'&&now-lastDeviceRefresh>1000){refreshDevices();lastDeviceRefresh=now;}
+    const polled=input.poll();
+    let inputBoundary=false;
+    if(polled.pausePressed){setPaused(!paused);inputBoundary=true;}
+    if((polled.disconnected.length||polled.unsupported.length)&&state.phase!=='ready'&&state.phase!=='finished'){
+      const warnings=[];
+      if(polled.disconnected.length)warnings.push(`${polled.disconnected.map(id=>id.toUpperCase()).join(', ')} controller disconnected.`);
+      if(polled.unsupported.length)warnings.push(`${polled.unsupported.map(id=>id.toUpperCase()).join(', ')} controller mapping unsupported.`);
+      setText(element('local-input-status'),`${warnings.join(' ')} Connect a standard-mapped controller and press a button, then Resume, or use Change players for a new match.`);
+      if(!paused){setPaused(true);inputBoundary=true;}
+    }else if(state.phase!=='ready')setText(element('local-input-status'),'Local play · shared screen · no network multiplayer');
+    if (!paused && !inputBoundary && !document.hidden && state.phase !== 'ready' && state.phase !== 'finished') {
+      inputQueue.push(polled.inputs, polled.actionGroups);
+      stepper.advance(delta, dt => {stepQueuedGame(state,inputQueue,dt,config);audio.update(state);});
+    }else{
+      inputQueue.clear();
     }
     updateUI();
     if (state.phase === 'finished' && !finishedHandled) {

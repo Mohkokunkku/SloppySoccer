@@ -1,4 +1,5 @@
 import { test as base, expect, type Locator, type Page } from '@playwright/test';
+import { startPartyMatch } from './party-helpers';
 
 // Use the configured production Fastify server, never Vite or mocked scene data.
 const test = base.extend<{ runtimeChecks: void }>({
@@ -106,11 +107,11 @@ test.describe('production Spain squad', () => {
     expect(response?.status()).toBe(200);
     await expectWebGL(page.locator('#pitch canvas'));
     const expectedCharacters: Record<string, string> = {
-      'home-0': 'A1', 'home-1': 'A3', 'home-2': 'A2', 'home-3': '',
-      'away-0': '', 'away-1': '', 'away-2': '', 'away-3': '',
+      'home-0': 'A1', 'home-1': 'A3', 'home-2': 'A2', 'home-3': '', 'home-4':'A2',
+      'away-0': '', 'away-1': '', 'away-2': '', 'away-3': '', 'away-4':'',
     };
     const expectCharacters = async () => {
-      await expect(page.locator('.role-marker[data-player]')).toHaveCount(8);
+      await expect(page.locator('.role-marker[data-player]')).toHaveCount(10);
       for (const [player, identity] of Object.entries(expectedCharacters)) {
         const marker = page.locator(`.role-marker[data-player="${player}"]`);
         await expect(marker).toHaveCount(1);
@@ -118,8 +119,7 @@ test.describe('production Spain squad', () => {
       }
     };
     await expectCharacters();
-    await page.locator('#start').click();
-    await expect(page.locator('#phase-label')).toHaveText('In play', {timeout:30_000});
+    await startPartyMatch(page);
     await expect(page.locator('#pause')).toBeEnabled();
     // A ticking clock proves the real match loop advances, not only an overlay toggle.
     const initialClock = await page.locator('#clock').innerText();

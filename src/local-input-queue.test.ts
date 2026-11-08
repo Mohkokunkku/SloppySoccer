@@ -1,0 +1,14 @@
+import{expect,it}from'vitest';import{LocalInputQueue}from'./local-input-queue';import{EMPTY_INPUT}from'../shared/types';
+it('explicit groups replace summary actions, snapshot chronology, and allow an explicit empty record',()=>{
+ const q=new LocalInputQueue(),groups={p1:[{shoot:false,pass:true,switchPlayer:false},{shoot:true,pass:false,switchPlayer:false}]};
+ q.push({p1:{...EMPTY_INPUT,shoot:true,pass:true}},groups);groups.p1[0].pass=false;
+ expect(q.consume().p1).toMatchObject({pass:true,shoot:false});expect(q.consume().p1).toMatchObject({pass:false,shoot:true});
+ expect(q.consume().p1).toMatchObject({pass:false,shoot:false});
+ q.push({p1:{...EMPTY_INPUT,shoot:true}},{});expect(q.consume().p1.shoot).toBe(false);
+});
+it('queues two separated switch pulses before any consume without merging them',()=>{const q=new LocalInputQueue();q.push({p1:{...EMPTY_INPUT,switchPlayer:true}});q.push({p1:{...EMPTY_INPUT}});q.push({p1:{...EMPTY_INPUT,switchPlayer:true,moveX:1,sprint:true}});expect(q.consume().p1).toMatchObject({switchPlayer:true,moveX:1,sprint:true});expect(q.consume().p1).toMatchObject({switchPlayer:true,moveX:1,sprint:true});expect(q.consume().p1.switchPlayer).toBe(false);});
+it('preserves poll order and simultaneous groups independently per seat',()=>{const q=new LocalInputQueue();q.push({p1:{...EMPTY_INPUT,pass:true}});q.push({p1:{...EMPTY_INPUT,shoot:true,switchPlayer:true},p2:{...EMPTY_INPUT,switchPlayer:true}});expect(q.consume()).toMatchObject({p1:{pass:true,shoot:false,switchPlayer:false},p2:{switchPlayer:true}});expect(q.consume()).toMatchObject({p1:{pass:false,shoot:true,switchPlayer:true},p2:{switchPlayer:false}});});
+it('snapshots queued groups and clears all backlog and held state',()=>{const q=new LocalInputQueue(),input={p1:{...EMPTY_INPUT,pass:true,moveY:1}};q.push(input);input.p1.pass=false;q.push({p1:{...EMPTY_INPUT,shoot:true}});expect(q.consume().p1.pass).toBe(true);q.clear();expect(q.consume()).toEqual({});q.push({p1:{...EMPTY_INPUT}});expect(q.consume().p1).toEqual(EMPTY_INPUT);});
+it('retains a pulse across frames with no fixed simulation tick',()=>{const q=new LocalInputQueue();q.push({p1:{...EMPTY_INPUT,shoot:true,moveX:1}});q.push({p1:{...EMPTY_INPUT,moveX:-1}});expect(q.consume().p1).toMatchObject({shoot:true,moveX:-1});expect(q.consume().p1.shoot).toBe(false);});
+it('consumes each independent seat action once across multiple simulation ticks',()=>{const q=new LocalInputQueue();q.push({p1:{...EMPTY_INPUT,shoot:true},p2:{...EMPTY_INPUT,pass:true,sprint:true}});expect(q.consume()).toMatchObject({p1:{shoot:true},p2:{pass:true,sprint:true}});expect(q.consume()).toMatchObject({p1:{shoot:false},p2:{pass:false,sprint:true}});});
+it('clears paused/stale actions and does not mutate caller input',()=>{const q=new LocalInputQueue(),input={p1:{...EMPTY_INPUT,switchPlayer:true}};q.push(input);q.consume();expect(input.p1.switchPlayer).toBe(true);q.clear();expect(q.consume()).toEqual({});});

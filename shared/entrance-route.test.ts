@@ -23,7 +23,7 @@ it.each([0,20,60].flatMap(frame=>[12,30].map(height=>({frame,height}))))('keeps 
   expect(s.elapsed).toBe(0);expect(s.timeRemaining).toBe(120);expect(s.score).toEqual({home:0,away:0});
   if(s.phase==='entering'){expect(s.entrance?.fieldHeight).toBe(20);expect(s.entrance?.exitY).toBe(10.5);expect(new Set(s.entrance?.completed)).toEqual(exited);}
  }
- expect(exited.size).toBe(8);expect(s.phase).toBe('playing');expect(s.entrance).toBeUndefined();
+ expect(exited.size).toBe(10);expect(s.phase).toBe('playing');expect(s.entrance).toBeUndefined();
  s.players.forEach(p=>{const target=kickoffPosition(p.team,Number(p.id.slice(-1)),'home',getTuning(s));expect(p.x).toBeCloseTo(target.x);expect(p.y).toBeCloseTo(target.y);});
  stepGame(s,held,1/60);expect(s.ball.ownerId).toBe('home-0');expect(s.controlledId).toBe('home-0');
 });

@@ -249,7 +249,7 @@ export function poseFigure(rig: FigureRig, player: Player, elapsed: number, redu
   rig.arms.forEach((arm,index)=>{arm.rotation.z=(index===0?-1:1)*(player.role==='keeper'?0.94:0.26);});
   if(cheer){
     const pose=celebrationPose(cheer.style,cheer.seconds,cheer.index,reducedMotion);
-    rig.root.position.y+=pose.hop;rig.root.position.x+=pose.side;rig.root.rotation.y+=pose.yaw;
+    rig.root.position.y+=pose.hop;rig.root.position.x+=pose.side;rig.root.position.z+=pose.forward;rig.root.rotation.y+=pose.yaw;
     rig.body.rotation.z=pose.roll;rig.body.rotation.x=0;rig.body.position.y=0;
     rig.arms[0].rotation.z=pose.leftArm;rig.arms[1].rotation.z=pose.rightArm;
     rig.arms[0].rotation.x=rig.arms[1].rotation.x=0;

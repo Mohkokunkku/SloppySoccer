@@ -5,6 +5,9 @@ import { FIELD, type GameState } from './types.js';
 
 const setup = () => {
   const state = createGame();
+  // These regressions intentionally exercise the legacy three-outfielder fixture.
+  state.players = state.players.filter(p => !p.id.endsWith('-4'));
+  delete state.controls;
   state.controlledId = 'none';
   state.phase = 'playing';
   return state;
