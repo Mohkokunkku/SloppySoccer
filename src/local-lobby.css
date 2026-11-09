@@ -1,0 +1,13 @@
+#local-lobby { min-width: 0; margin: 12px 0; padding: 12px; border: 1px solid #bbb5a7; border-radius: 10px; }
+#local-lobby legend { padding: 0 6px; font-weight: 700; }
+#local-lobby-help { margin: 0 0 10px; font-size: 0.85rem; line-height: 1.5; }
+#local-lobby .local-seat { display: grid; grid-template-columns: auto minmax(70px, 1fr) minmax(110px, 2fr); gap: 8px; align-items: center; padding: 8px 0; border-top: 1px solid #bbb5a7; }
+#local-lobby label { display: flex; flex-wrap: wrap; gap: 5px; align-items: center; min-width: 0; font-size: 0.85rem; }
+#local-lobby select { width: 100%; min-width: 0; max-width: 100%; }
+#local-lobby input[type='checkbox'] { width: auto; }
+#local-lobby .local-seat-status { grid-column: 1 / -1; font-size: 0.8rem; line-height: 1.4; overflow-wrap: anywhere; }
+#local-lobby:disabled { opacity: 0.7; }
+@media (max-width: 420px) {
+  #local-lobby .local-seat { grid-template-columns: 1fr 1fr; }
+  #local-lobby .local-seat > label:last-of-type { grid-column: 1 / -1; }
+}

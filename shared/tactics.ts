@@ -1,5 +1,6 @@
 import { FIELD, type GameState, type Player, type TacticalRole, type Team } from './types.js';
 import { getTuning } from './tuning.js';
+import { controlledPlayerIds } from './local-controls.js';
 
 export interface TacticalIntent {
   playerId: string;
@@ -46,7 +47,9 @@ export function planTeamMovement(state: GameState, team: Team): TacticalIntent[]
   const ballA = origin.x * sign;
   const ownBall = owner?.team === team;
   const forward = openAttackingLane(state, team, origin, clamp(ballA + 6, 3, 12));
-  const figures = state.players.filter(p => p.team === team && p.role === 'outfield' && p.id !== state.controlledId);
+  const humans = controlledPlayerIds(state);
+  const teammates = state.players.filter(p => p.team === team && p.role === 'outfield');
+  const figures = teammates.filter(p => !humans.has(p.id));
   const opponents = state.players.filter(p => p.team !== team && p.role === 'outfield');
   const enemyAttacker = opponents.find(p => tacticalRoleOf(p) === 'attacker') ?? owner ?? state.ball;
   const enemyMiddle = opponents.find(p => tacticalRoleOf(p) === 'midfielder') ?? owner ?? state.ball;
@@ -91,6 +94,12 @@ export function planTeamMovement(state: GameState, team: Team): TacticalIntent[]
         x = clamp(ballA + 3, -2, 8) * sign; y = origin.y >= 0 ? -4 : 4; action = 'hold';
       }
     }
+    const peers = teammates.filter(other => tacticalRoleOf(other) === role)
+      .sort((a,b) => a.id.localeCompare(b.id));
+    if (peers.length > 1 && action !== 'press' && action !== 'carry') {
+      const lane = peers.findIndex(other => other.id === p.id);
+      y = clamp((lane - (peers.length - 1) / 2) * 9 + origin.y * 0.2, -6.5, 6.5);
+    }
     return {playerId:p.id,x:clamp(x,-limitX,limitX),y:clamp(y,-limitY,limitY),action,arrivalRadius};
   });
   // Keep the back figure visibly below the other autonomous role targets.
@@ -98,7 +107,8 @@ export function planTeamMovement(state: GameState, team: Team): TacticalIntent[]
   for (const target of intents) {
     const p = figures.find(p => p.id === target.playerId)!;
     if (tacticalRoleOf(p) !== 'defender' || target.action === 'press') continue;
-    const upperDepth = Math.min(-8, ...intents.filter(other => other !== target)
+    const upperDepth = Math.min(-8, ...intents.filter(other =>
+      tacticalRoleOf(figures.find(p => p.id === other.playerId)!) !== 'defender')
       .map(other => other.x * sign - 3));
     target.x = clamp(Math.min(target.x * sign, upperDepth), -limitX, limitX) * sign;
   }
@@ -106,8 +116,8 @@ export function planTeamMovement(state: GameState, team: Team): TacticalIntent[]
 }
 
 export function tacticalRoleOf(player: Player): TacticalRole | null {
-  if (player.role === 'keeper') return null;
-  return player.tacticalRole ?? ({ '0': 'attacker', '1': 'midfielder', '2': 'defender' } as const)[
-    player.id.match(/-(0|1|2)$/)?.[1] as '0' | '1' | '2'
+  if (player.role === 'keeper' || /^(home|away)-3$/.test(player.id)) return null;
+  return player.tacticalRole ?? ({ '0': 'attacker', '1': 'midfielder', '2': 'defender', '4': 'defender' } as const)[
+    player.id.match(/-(0|1|2|4)$/)?.[1] as '0' | '1' | '2' | '4'
   ] ?? 'midfielder';
 }

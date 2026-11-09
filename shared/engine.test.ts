@@ -97,7 +97,7 @@ describe('computer figures', () => {
   });
   it('moves teammates into support and sends an opponent toward the possessed ball', () => {
     const state = play();
-    const supporter = state.players[1]!, pursuer = state.players[4]!;
+    const supporter = state.players[1]!, pursuer = state.players.find(p=>p.id==='away-0')!;
     const sx = supporter.x;
     const distance = Math.hypot(pursuer.x - state.ball.x, pursuer.y - state.ball.y);
     advance(state, 0.2);
@@ -135,7 +135,7 @@ describe('goals and boards', () => {
     const targets = state.players.map(p => {
       const slot = Number(p.id.split('-')[1]), dir = p.team === 'home' ? 1 : -1;
       return {x:(slot===3?-14.6:slot===0?(p.team===team?-1:-3):slot===1?-5:-10)*dir,
-        y:slot===1?-5:slot===2?5:0};
+        y:slot===2?-4.5:slot===4?4.5:0};
     });
     const initial = state.players.map(p => ({x:p.x,y:p.y}));
     const time = state.timeRemaining, elapsed = state.elapsed, score = {...state.score};
@@ -243,7 +243,7 @@ describe('free ball physics', () => {
 describe('ball actions', () => {
   it('allows a nearby opponent to win possession with a brief protection against ping-pong tackles', () => {
     const state = play(); isolate(state); state.elapsed = 1;
-    const home = state.players[0]!, away = state.players[4]!;
+    const home = state.players[0]!, away = state.players.find(p=>p.id==='away-0')!;
     home.x = 0; home.y = 0; home.facing = 0;
     away.x = 0.8; away.y = 0;
     Object.assign(state.ball, { ownerId: home.id, x: 0.9, y: 0 });
@@ -271,7 +271,7 @@ describe('ball actions', () => {
   it('switches to the closest other home outfielder on an edge, never a keeper or opponent', () => {
     const state = play();
     const previous = state.controlledId;
-    state.ball.ownerId = null; state.ball.x = -6; state.ball.y = -4.8;
+    state.ball.ownerId = null; state.ball.x = -6; state.ball.y = 0;
     stepGame(state, input({ switchPlayer: true }), frame);
     expect(state.controlledId).toBe('home-1');
     stepGame(state, input({ switchPlayer: true }), frame);
@@ -493,7 +493,7 @@ describe('tactical role identity', () => {
   it.each(['home', 'away'] as const)('assigns one attacker, midfielder and defender to %s without changing keeper identity', team => {
     const state = createGame();
     expect(state.players.filter(p => p.team === team && p.role === 'outfield').map(p => p.tacticalRole))
-      .toEqual(['attacker', 'midfielder', 'defender']);
+      .toEqual(['attacker', 'midfielder', 'defender', 'defender']);
     expect(state.players.find(p => p.team === team && p.role === 'keeper')?.tacticalRole).toBeUndefined();
   });
 });
@@ -503,14 +503,14 @@ describe('match creation', () => {
     const state = createGame({ duration });
     expect(state.timeRemaining).toBe(120);
   });
-  it('creates eight figures with three outfield players and one keeper per team', () => {
+  it('creates ten figures with four outfield players and one keeper per team', () => {
     const state = createGame({ duration: 75 });
-    expect(state.players).toHaveLength(8);
+    expect(state.players).toHaveLength(10);
     for (const team of ['home', 'away']) {
-      expect(state.players.filter(p => p.team === team && p.role === 'outfield')).toHaveLength(3);
+      expect(state.players.filter(p => p.team === team && p.role === 'outfield')).toHaveLength(4);
       expect(state.players.filter(p => p.team === team && p.role === 'keeper')).toHaveLength(1);
     }
-    expect(new Set(state.players.map(p => p.id)).size).toBe(8);
+    expect(new Set(state.players.map(p => p.id)).size).toBe(10);
     expect(state.phase).toBe('ready');
     expect(state.timeRemaining).toBe(75);
     const controlled = state.players.find(p => p.id === state.controlledId)!;

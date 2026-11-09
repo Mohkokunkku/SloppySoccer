@@ -1,11 +1,12 @@
 import { test,expect } from '@playwright/test';
+import { startPartyMatch, waitForPartyPlay } from './party-helpers';
 test('production game renders WebGL and starts, pauses and resumes a match',async({page,request})=>{
   const errors:string[]=[]; page.on('pageerror',error=>errors.push(error.message));
   expect((await request.get('/api/health')).ok()).toBeTruthy();
   await page.goto('/');
   await expect(page).toHaveTitle(/Sloppy Soccer/);
   await expect(page.locator('canvas')).toBeVisible();
-  await page.getByRole('button',{name:/kick.?off|start match|play match/i}).first().click();
+  await startPartyMatch(page);
   await page.keyboard.down('ArrowRight'); await page.waitForTimeout(300); await page.keyboard.up('ArrowRight');
   await page.keyboard.press('Space');
   await page.keyboard.press('Escape');
@@ -27,7 +28,8 @@ test('a complete one-minute match saves exactly once to the real backend', async
   page.on('request', request => { if (request.method() === 'POST' && request.url().endsWith('/api/results')) posts.push(request.postData() ?? ''); });
   await page.goto('/');
   await page.getByRole('radio', { name:'1 min', exact:true }).check();
-  await page.getByRole('button', {name:'Start match'}).click();
+  await page.getByRole('radio', { name:'Hard', exact:true }).check();
+  await startPartyMatch(page);
   await expect(page.locator('#phase-label')).toHaveText('Full time', {timeout:130_000});
   await expect(page.locator('#save-status')).toHaveText('Final score saved to the clubhouse.', {timeout:10_000});
   expect(posts).toHaveLength(1);
@@ -37,7 +39,9 @@ test('a complete one-minute match saves exactly once to the real backend', async
   expect(stored.results.some((row: {duration:number;home:number;away:number}) => row.duration === 60 && row.home === submitted.home && row.away === submitted.away)).toBe(true);
   await page.screenshot({path:'test-results/sloppy-soccer-fulltime.png',fullPage:true});
   await page.getByRole('button', {name:'Play again'}).click();
-  await expect(page.locator('#phase-label')).toHaveText('In play', {timeout:30_000});
+  await expect(page.locator('#clock')).toHaveText('1:00');
+  await expect(page.locator('input[name="difficulty"]:checked')).toHaveValue('hard');
+  await waitForPartyPlay(page);
   expect(posts).toHaveLength(1);
 });
 
@@ -45,15 +49,14 @@ test('shows the selected tactical role and updates it when switching players',as
   await page.goto('/');
   await expect(page.locator('#controlled-role')).toHaveText('Attacker');
   await expect(page.locator('#controlled-role')).toHaveAttribute('title','Find space ahead for a pass.');
-  await page.getByRole('button',{name:'Start match'}).click();
-  await expect(page.locator('#phase-label')).toHaveText('In play',{timeout:30_000});
+  await startPartyMatch(page);
   await page.keyboard.press('q');
   await expect(page.locator('#controlled-role')).toHaveText(/Midfielder|Defender/);
 });
-test('shows national teams, eight role markers and working optional audio',async({page,request})=>{
+test('shows national teams, ten role markers and working optional audio',async({page,request})=>{
   const errors:string[]=[];page.on('pageerror',error=>errors.push(error.message));await page.goto('/');
   await expect(page.locator('.team.home')).toContainText('Spain');await expect(page.locator('.team.away')).toContainText('Argentina');
-  await expect(page.locator('.role-marker')).toHaveCount(8);
+  await expect(page.locator('.role-marker')).toHaveCount(10);
   for(const label of ['A','M','D','GK'])expect(await page.locator('.role-marker').allTextContents()).toContain(label);
   const sound=page.locator('#sound-toggle');await sound.click();await expect(sound).toHaveAttribute('aria-pressed','true');
   await page.locator('#sound-test').click();await expect.poll(async()=>Number(await sound.getAttribute('data-played'))).toBeGreaterThan(0);
@@ -70,7 +73,7 @@ test('rehearses all three real goal dances and jogs back before kick-off',async(
     await expect(status).toHaveAttribute('data-phase','resetting',{timeout:7000});
     await expect(status).toHaveAttribute('data-phase','playing',{timeout:8000});
   }
-  await expect(page.locator('.role-marker')).toHaveCount(8);expect(errors).toEqual([]);
+  await expect(page.locator('.role-marker')).toHaveCount(10);expect(errors).toEqual([]);
 });
 test('offers three distinct player concepts without applying a character change',async({page})=>{
   const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));await page.goto('/toybox-concepts.html');

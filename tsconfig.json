@@ -23,6 +23,7 @@
     "shared",
     "server",
     "scripts",
+    "deployment",
     "tests",
     "vite.config.ts",
     "vitest.config.ts",

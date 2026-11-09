@@ -1,11 +1,14 @@
 import { planTeamMovement, type TacticalIntent } from './tactics.js';
+import { formationPosition, formationRole, sanitizeFormations } from './formations.js';
+import { humanControls, controlledPlayerIds } from './local-controls.js';
+import { EMPTY_INPUT, type Formation } from './types.js';
 import { DEFAULT_TUNING, getTuning } from './tuning.js';
 import type { GameTuning } from './types.js';
 import { DEFAULT_CONFIG, FIELD, type GameState, type InputState, type MatchConfig, type Player, type Team } from './types.js';
 
 const direction = (team: Team) => team === 'home' ? 1 : -1;
 interface Runtime {
-  shoot: boolean; pass: boolean; switchPlayer: boolean;
+  edges: Map<string,InputState>;
   pickupLock: number; kickerId: string | null;
   aiCooldowns: Map<string, number>;
   tacticalPlans: Map<Team, {context:string;nextAt:number;intents:TacticalIntent[]}>;
@@ -14,38 +17,49 @@ const runtimes = new WeakMap<GameState, Runtime>();
 function runtime(state: GameState): Runtime {
   let value = runtimes.get(state);
   if (!value) {
-    value = { shoot: false, pass: false, switchPlayer: false, pickupLock: 0, kickerId: null, aiCooldowns: new Map(), tacticalPlans: new Map() };
+    value = { edges:new Map(), pickupLock: 0, kickerId: null, aiCooldowns: new Map(), tacticalPlans: new Map() };
     runtimes.set(state, value);
   }
   return value;
 }
 
-export function kickoffPosition(team: Team, slot: number, receivingTeam: Team, tuning: GameTuning = DEFAULT_TUNING): {x:number;y:number} {
-  return {
-    x: (slot === 3 ? -14.6 : slot === 0 ? (team === receivingTeam ? -1 : -3) : slot === 1 ? -5 : -10) * direction(team) * tuning.fieldWidth / 32,
-    y: (slot === 1 ? -5 : slot === 2 ? 5 : 0) * tuning.fieldHeight / 20,
-  };
+export function kickoffPosition(team: Team, slot: number, receivingTeam: Team, tuning: GameTuning = DEFAULT_TUNING, formations?:Record<Team,Formation>): {x:number;y:number} {
+  return formationPosition(team,slot,team !== receivingTeam,tuning,sanitizeFormations(formations)[team]);
 }
 
 export function createGame(config: Partial<MatchConfig> = {}): GameState {
   const players: Player[] = [];
+  const formations=sanitizeFormations(config.formations);
   for (const team of ['home', 'away'] as const) {
     const sign = direction(team);
-    for (let i = 0; i < 4; i++) players.push({
+    for (let i = 0; i < 5; i++) players.push({
       id: `${team}-${i}`, team, role: i === 3 ? 'keeper' : 'outfield',
-      ...(i < 3 ? { tacticalRole: (['attacker', 'midfielder', 'defender'] as const)[i] } : {}),
-      ...kickoffPosition(team, i, 'home'),
+      ...(i !== 3 ? { tacticalRole: formationRole(i,formations[team])! } : {}),
+      ...kickoffPosition(team, i, 'home',DEFAULT_TUNING,formations),
       vx: 0, vy: 0, facing: sign === 1 ? 0 : Math.PI, stamina: 1,
     });
   }
   return { players, ball: { x: -0.1, y: 0, vx: 0, vy: 0, z: 0, vz: 0, ownerId: 'home-0' },
     score: { home: 0, away: 0 }, timeRemaining: typeof config.duration === 'number' && Number.isFinite(config.duration) && config.duration > 0 && config.duration <= 600 ? config.duration : DEFAULT_CONFIG.duration,
-    phase: 'ready', phaseTimer: 0, controlledId: 'home-0', lastScorer: null, elapsed: 0 };
+    formations, phase: 'ready', phaseTimer: 0, controlledId: 'home-0', lastScorer: null, elapsed: 0 };
 }
 
-export function startGame(state: GameState, withEntrance = false): void {
+export const INTRO_SECONDS=6.5;
+function beginIntro(state:GameState):void {
+  state.phase='intro';state.phaseTimer=INTRO_SECONDS;delete state.entrance;
+  for(const p of state.players)Object.assign(p,kickoffPosition(p.team,Number(p.id.split('-')[1]),'home',getTuning(state),state.formations),{vx:0,vy:0,facing:p.team==='home'?0:Math.PI});
+  Object.assign(state.ball,{x:0,y:0,vx:0,vy:0,z:0,vz:0,ownerId:null});
+}
+export function skipIntro(state:GameState):void {
+  if(state.phase!=='intro')return;
+  for(const c of humanControls(state))runtime(state).edges.set(c.seatId,{...EMPTY_INPUT,shoot:true,pass:true,switchPlayer:true});
+  kickoff(state,'home');
+}
+export function startGame(state: GameState, withEntrance = false, withIntro = false): void {
   if (state.phase !== 'ready') return;
   state.phase = withEntrance ? 'entering' : 'playing';
+  state.introEnabled=withIntro;
+  if(!withEntrance&&withIntro)beginIntro(state);
   if (withEntrance) {
     const fieldHeight=getTuning(state).fieldHeight;
     state.entrance={fieldHeight,exitY:fieldHeight/2+.5,completed:[]};
@@ -126,7 +140,11 @@ function pass(state: GameState, player: Player, x: number, y: number): void {
   state.ball.vz = 0.8;
   runtime(state).pickupLock = 0.24;
   runtime(state).kickerId = player.id;
-  if (player.id === state.controlledId) state.controlledId = target.id;
+  const control=humanControls(state).find(c=>c.playerId===player.id);
+  if(control&&!controlledPlayerIds(state).has(target.id)) {
+    control.playerId=target.id;
+    state.controlledId=state.controls?humanControls(state)[0]?.playerId??target.id:target.id;
+  }
 }
 function kickoff(state: GameState, team: Team): void {
   for (const p of state.players) {
@@ -135,7 +153,7 @@ function kickoff(state: GameState, team: Team): void {
     p.vx = p.vy = 0; p.facing = sign === 1 ? 0 : Math.PI;
     p.stamina = Math.max(p.stamina, 0.65);
   }
-  state.controlledId = 'home-0';
+  state.controlledId = state.controls?humanControls(state)[0]?.playerId??state.controlledId:'home-0';
   state.ball.ownerId = `${team}-0`;
   dribble(state);
   state.phase = 'playing'; state.phaseTimer = 0;
@@ -146,7 +164,7 @@ function kickoff(state: GameState, team: Team): void {
 function updateOutfieldAI(state: GameState, dt: number, config: Partial<MatchConfig>): void {
   // Plan both sides before moving either side; keep user control authoritative.
   const meta = runtime(state);
-  const context = `${state.ball.ownerId}:${state.controlledId}:${JSON.stringify(getTuning(state))}`;
+  const context = `${state.ball.ownerId}:${[...controlledPlayerIds(state)].join(',')}:${JSON.stringify(getTuning(state))}`;
   const intents: TacticalIntent[] = [];
   for (const team of ['home','away'] as const) {
     let plan = meta.tacticalPlans.get(team);
@@ -158,13 +176,17 @@ function updateOutfieldAI(state: GameState, dt: number, config: Partial<MatchCon
   }
   for (const intent of intents) {
     const p = state.players.find(player => player.id === intent.playerId);
-    if (!p || p.id === state.controlledId || p.role !== 'outfield') continue;
+    if (!p || controlledPlayerIds(state).has(p.id) || p.role !== 'outfield') continue;
     const dx = intent.x - p.x, dy = intent.y - p.y;
-    const speed = (p.team === 'home' ? 4.5 : config.difficulty === 'easy' ? 3.3 : config.difficulty === 'hard' ? 5.3 : 4.2) * getTuning(state).runSpeed/5.6;
+    const speed = botSpeed(state,p.team,config) * getTuning(state).runSpeed/5.6;
     if (Math.hypot(dx,dy) <= intent.arrivalRadius) move(p,0,0,0,dt,getTuning(state));
     else move(p,dx,dy,speed,dt,getTuning(state));
     p.stamina = clamp(p.stamina + dt * 0.15,0,1);
   }
+}
+function botSpeed(state:GameState,team:Team,config:Partial<MatchConfig>):number {
+  const teams=new Set(humanControls(state).map(c=>c.team));
+  return teams.size===2?4.2:teams.has(team)?4.5:config.difficulty==='easy'?3.3:config.difficulty==='hard'?5.3:4.2;
 }
 function updateKeepers(state: GameState, dt: number, config: Partial<MatchConfig>): void {
   for (const keeper of state.players.filter(p => p.role === 'keeper')) {
@@ -174,7 +196,7 @@ function updateKeepers(state: GameState, dt: number, config: Partial<MatchConfig
     const travel = towardsGoal ? Math.max(0, (homeX - state.ball.x) / state.ball.vx) : 0;
     const prediction = state.ball.y + state.ball.vy * Math.min(travel, 0.4);
     const targetY = clamp(prediction, -getTuning(state).goalWidth / 2 + 0.75, getTuning(state).goalWidth / 2 - 0.75);
-    const speed = keeper.team === 'away' && config.difficulty === 'easy' ? 3 : config.difficulty === 'hard' ? 5 : 4.2;
+    const speed = botSpeed(state,keeper.team,config);
     move(keeper, homeX - keeper.x, targetY - keeper.y, speed * getTuning(state).runSpeed/5.6, dt,getTuning(state),sign === 1 ? 0 : Math.PI);
   }
 }
@@ -197,7 +219,7 @@ function updateAIAction(state: GameState, dt: number): void {
   const meta = runtime(state);
   for (const [id, seconds] of meta.aiCooldowns) meta.aiCooldowns.set(id, Math.max(0, seconds - dt));
   const owner = state.players.find(p => p.id === state.ball.ownerId);
-  if (!owner || owner.id === state.controlledId || (meta.aiCooldowns.get(owner.id) ?? 0) > 0 || state.elapsed < 0.3) return;
+  if (!owner || controlledPlayerIds(state).has(owner.id) || (meta.aiCooldowns.get(owner.id) ?? 0) > 0 || state.elapsed < 0.3) return;
   const sign = direction(owner.team);
   if (owner.role === 'keeper') {
     shoot(state, owner, sign, Math.sin(state.elapsed) * 0.25);
@@ -217,10 +239,23 @@ function updateAIAction(state: GameState, dt: number): void {
   }
 }
 export function stepGame(state: GameState, input: InputState, dt: number, config: Partial<MatchConfig> = {}): void {
+  stepLocalGame(state,{p1:input},dt,config);
+}
+export function stepLocalGame(state: GameState, inputs:Record<string,InputState>, dt: number, config: Partial<MatchConfig> = {}, inputMode:'held'|'pulses'='held'): void {
   if (state.phase === 'ready' || state.phase === 'finished' || !Number.isFinite(dt) || dt <= 0) return;
+  const meta=runtime(state), controls=humanControls(state);
+  const actions=controls.map(control=>{
+    const input=inputs[control.seatId]??EMPTY_INPUT, previous=meta.edges.get(control.seatId)??EMPTY_INPUT;
+    meta.edges.set(control.seatId,{...input});
+    // Hub/queue pulses are already edges; consecutive true ticks can be distinct presses.
+    return {control,input,shotPressed:input.shoot&&(inputMode==='pulses'||!previous.shoot),passPressed:input.pass&&(inputMode==='pulses'||!previous.pass),switchPressed:input.switchPlayer&&(inputMode==='pulses'||!previous.switchPlayer)};
+  });
+  if(state.phase==='intro') {
+    state.phaseTimer=Math.max(0,state.phaseTimer-Math.min(dt,.1));
+    if(state.phaseTimer<1e-9)skipIntro(state);
+    return;
+  }
   if (state.phase === 'goal') {
-    const meta = runtime(state);
-    meta.shoot = !!input.shoot; meta.pass = !!input.pass; meta.switchPlayer = !!input.switchPlayer;
     state.phaseTimer = Math.max(0, state.phaseTimer - Math.min(dt, 0.1));
     if (state.phaseTimer < 1e-9) {
       state.phase = 'resetting'; state.phaseTimer = 0;
@@ -229,8 +264,6 @@ export function stepGame(state: GameState, input: InputState, dt: number, config
     return;
   }
   if (state.phase === 'resetting' || state.phase === 'entering') {
-    const meta = runtime(state);
-    meta.shoot = !!input.shoot; meta.pass = !!input.pass; meta.switchPlayer = !!input.switchPlayer;
     const team = state.phase === 'entering' ? 'home' : state.lastScorer === 'home' ? 'away' : 'home';
     const resetDt = Math.min(dt, 0.1);
     const entering=state.phase==='entering';
@@ -241,7 +274,7 @@ export function stepGame(state: GameState, input: InputState, dt: number, config
     Object.assign(state.ball, {x:0,y:0,vx:0,vy:0,z:0,vz:0,ownerId:null});
     for (const p of state.players) {
       const exiting=!!entrance&&!entrance.completed.includes(p.id);
-      const target = exiting?{x:p.team==='home'?-2:2,y:entrance!.exitY}:kickoffPosition(p.team, Number(p.id.split('-')[1]), team,getTuning(state));
+      const target = exiting?{x:p.team==='home'?-2:2,y:entrance!.exitY}:kickoffPosition(p.team, Number(p.id.split('-')[1]), team,getTuning(state),state.formations);
       const dx = target.x - p.x, dy = target.y - p.y;
       const distance = Math.hypot(dx, dy);
       if (distance > routeSpeed * resetDt) {
@@ -256,37 +289,37 @@ export function stepGame(state: GameState, input: InputState, dt: number, config
         if(exiting){entrance!.completed.push(p.id);arrived=false;}
       }
     }
-    if (arrived) kickoff(state, team);
+    if (arrived) {if(entering&&state.introEnabled)beginIntro(state);else kickoff(state, team);}
     return;
   }
   dt = Math.min(dt, 0.1, state.timeRemaining);
-  const meta = runtime(state);
   meta.pickupLock = Math.max(0, meta.pickupLock - dt);
-  const shotPressed = !!input.shoot && !meta.shoot;
-  const passPressed = !!input.pass && !meta.pass;
-  const switchPressed = !!input.switchPlayer && !meta.switchPlayer;
-  meta.shoot = !!input.shoot;
-  meta.pass = !!input.pass;
-  meta.switchPlayer = !!input.switchPlayer;
+  for(const {control,input,switchPressed} of actions) {
   if (switchPressed) {
-    const candidates = state.players.filter(p => p.team === 'home' && p.role === 'outfield' && p.id !== state.controlledId);
+    const claimed=new Set(controls.map(c=>c.playerId));
+    const candidates = state.players.filter(p => p.team === control.team && p.role === 'outfield' && !claimed.has(p.id));
     candidates.sort((a, b) => Math.hypot(a.x - state.ball.x, a.y - state.ball.y) - Math.hypot(b.x - state.ball.x, b.y - state.ball.y));
-    if (candidates[0]) state.controlledId = candidates[0].id;
+    if (candidates[0]) control.playerId = candidates[0].id;
   }
-  const player = state.players.find(p => p.id === state.controlledId);
+  const player = state.players.find(p => p.id === control.playerId);
   if (player) {
     const x = axis(input.moveX), y = axis(input.moveY);
     const sprint = input.sprint && player.stamina > 0.08 && Math.hypot(x, y) > 0;
     move(player, x, y, getTuning(state).runSpeed * (sprint ? getTuning(state).sprintMultiplier : 1), dt,getTuning(state));
     player.stamina = clamp(player.stamina + (sprint ? -0.32 : 0.2) * dt, 0, 1);
   }
+  }
+  if(controls[0])state.controlledId=controls[0].playerId;
   updateOutfieldAI(state, dt, config);
   updateKeepers(state, dt, config);
   dribble(state);
   contestPossession(state);
   updateAIAction(state, dt);
-  if (player && state.ball.ownerId === player.id && shotPressed) shoot(state, player, axis(input.moveX), axis(input.moveY));
-  else if (player && state.ball.ownerId === player.id && passPressed) pass(state, player, axis(input.moveX), axis(input.moveY));
+  for(const {control,input,shotPressed,passPressed} of actions) {
+    const player=state.players.find(p=>p.id===control.playerId);
+    if (player && state.ball.ownerId === player.id && shotPressed) shoot(state, player, axis(input.moveX), axis(input.moveY));
+    else if (player && state.ball.ownerId === player.id && passPressed) pass(state, player, axis(input.moveX), axis(input.moveY));
+  }
   if (!state.ball.ownerId) {
     const ball = state.ball;
     ball.x += ball.vx * dt;

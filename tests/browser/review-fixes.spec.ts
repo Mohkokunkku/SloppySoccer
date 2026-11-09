@@ -1,4 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
+import { startPartyMatch } from './party-helpers';
 
 // Production DOM and native browser input only. Execute after coordinator rebuild.
 async function restoreNativeFocus(page:Page):Promise<void>{
@@ -76,8 +77,7 @@ test('READY goal audition cancels on native browser window blur', async ({ page,
 test('native shot rotation survives a paused geometry rebuild', async ({ page }) => {
   await open(page);
   await page.locator('#tuning-panel summary').click();
-  await page.locator('#start').click();
-  await expect(page.locator('#pitch')).toHaveAttribute('data-phase', 'playing', { timeout: 30_000 });
+  await startPartyMatch(page);
   await page.locator('#pitch').focus();
   await page.keyboard.press('Space');
   // Inspect and pause in one browser task, rather than racing remote round trips.
@@ -123,12 +123,12 @@ for (const key of ['End', 'Home']) {
       const deadline = performance.now() + 30_000;
       let samples = 0;
       while (performance.now() < deadline) {
-        if (pitch.dataset.phase === 'playing') return { complete: true, samples };
+        if (pitch.dataset.phase === 'playing' || pitch.dataset.phase === 'intro') return { complete: true, samples };
         if (pitch.dataset.phase !== 'entering') throw new Error(`Unexpected phase ${pitch.dataset.phase}`);
         if (document.querySelector('#clock')!.textContent !== clock) throw new Error('Entrance advanced match clock');
         if (pitch.dataset.entryAnchorHeight !== originalHeight) throw new Error('Entrance anchor moved with live geometry');
         const count = Number(pitch.dataset.entryCount);
-        if (!Number.isInteger(count) || count < 0 || count > 8) throw new Error(`Invalid entry count ${count}`);
+        if (!Number.isInteger(count) || count < 0 || count > 10) throw new Error(`Invalid entry count ${count}`);
         samples++;
         await new Promise<void>(resolve => requestAnimationFrame(() => resolve()));
       }

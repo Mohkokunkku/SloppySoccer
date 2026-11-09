@@ -12,6 +12,7 @@ function show(style:number):void{
  for(const p of state.players.filter(p=>p.team===team)){const slot=Number(p.id.split('-')[1]);p.x=(10+slot*0.7)*(team==='home'?1:-1);p.y=-4+slot*2.5;}
  audio.reset();void audio.unlock();audio.update(state);Object.assign(state.ball,{x:team==='home'?16.4:-16.4,y:0,z:0,vx:0,vy:0,vz:0,ownerId:null});stepGame(state,EMPTY_INPUT,1/60);audio.update(state);
  stepper.reset();last=0;
+ status.dataset.danceStyle=String(style);status.dataset.danceName=DANCE_NAMES[style];
  for(const button of document.querySelectorAll<HTMLButtonElement>('[data-dance]'))button.setAttribute('aria-pressed',String(Number(button.dataset.dance)===style));
 }
 for(const b of document.querySelectorAll<HTMLButtonElement>('[data-dance]'))b.addEventListener('click',()=>show(Number(b.dataset.dance)));
