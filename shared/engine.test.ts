@@ -410,18 +410,20 @@ describe('safety and keeper saves', () => {
 });
 
 describe('role-aware AI movement', () => {
-  it.each(['home','away'] as const)('makes the nearest %s defender retreat beneath a midfield presser in real play', team => {
+  it.each(['home','away'] as const)('makes the nearest %s defender close down and win the ball in real play', team => {
     const state=play(); const sign=team==='home'?1:-1, enemy=team==='home'?'away':'home';
     state.controlledId=`${enemy}-0`;
     const defender=state.players.find(p=>p.id===`${team}-2`)!;
     const middle=state.players.find(p=>p.id===`${team}-1`)!;
     Object.assign(state.players.find(p=>p.id===`${team}-0`)!,{x:9*sign,y:6});
-    Object.assign(middle,{x:6*sign,y:-5}); Object.assign(defender,{x:-6*sign,y:0});
+    Object.assign(middle,{x:6*sign,y:-5}); Object.assign(defender,{x:-9*sign,y:0});
     Object.assign(state.players.find(p=>p.id===state.controlledId)!,{x:-6*sign,y:0,facing:sign===1?Math.PI:0});
     state.ball.ownerId=state.controlledId;
-    advance(state,0.5);
-    expect(defender.x*sign).toBeLessThan(-7.5);
-    expect(defender.x*sign).toBeLessThan(middle.x*sign-3);
+    advance(state,0.9);
+    expect(state.ball.ownerId).toBe(defender.id);
+    expect(defender.x*sign).toBeGreaterThan(-9);
+    const cover=state.players.find(p=>p.id===`${team}-4`)!;
+    expect(cover.x*sign).toBeLessThan(defender.x*sign-1.5);
   });
   it.each(['home','away'] as const)('keeps %s deep defense visible below the midfield with a forward carrier', team => {
     const state=play(); const sign=team==='home'?1:-1;

@@ -16,7 +16,7 @@ const player = (state: GameState, id: string) => state.players.find(p => p.id ==
 const intent = (state: GameState, id: string) => planTeamMovement(state, 'home').find(p => p.playerId === id)!;
 
 describe('planTeamMovement', () => {
-  it.each(['home', 'away'] as const)('reserves the nearest %s defender for deep emergencies, not ordinary pressing', team => {
+  it.each(['home', 'away'] as const)('lets the nearest %s defender press ordinary attacks as well as deep emergencies', team => {
     const state = setup(); const sign = team === 'home' ? 1 : -1;
     const enemy = team === 'home' ? 'away' : 'home';
     Object.assign(player(state, `${team}-0`), {x:9*sign,y:6});
@@ -24,7 +24,7 @@ describe('planTeamMovement', () => {
     Object.assign(player(state, `${team}-2`), {x:-6*sign,y:0});
     Object.assign(player(state, `${enemy}-0`), {x:-6*sign,y:0});
     Object.assign(state.ball, {ownerId:`${enemy}-0`,x:-6*sign,y:0});
-    expect(planTeamMovement(state, team).find(p => p.playerId === `${team}-2`)!.action).toBe('cover');
+    expect(planTeamMovement(state, team).find(p => p.playerId === `${team}-2`)!.action).toBe('press');
     player(state, `${enemy}-0`).x = -12*sign; state.ball.x = -12*sign;
     player(state, `${team}-2`).x = -11*sign;
     expect(planTeamMovement(state, team).find(p => p.playerId === `${team}-2`)!.action).toBe('press');
