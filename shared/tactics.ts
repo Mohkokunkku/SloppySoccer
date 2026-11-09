@@ -54,10 +54,29 @@ export function planTeamMovement(state: GameState, team: Team): TacticalIntent[]
   const enemyAttacker = opponents.find(p => tacticalRoleOf(p) === 'attacker') ?? owner ?? state.ball;
   const enemyMiddle = opponents.find(p => tacticalRoleOf(p) === 'midfielder') ?? owner ?? state.ball;
   const pressureCost = (p: Player) => Math.hypot(p.x - origin.x, p.y - origin.y)
-    + (tacticalRoleOf(p) === 'defender' && ballA > -5 ? 4 : tacticalRoleOf(p) === 'midfielder' ? 0.5 : 0);
+    + (tacticalRoleOf(p) === 'defender' && ballA > 0 ? 1.5 : tacticalRoleOf(p) === 'midfielder' ? 0.5 : 0);
   const presser = !ownBall && owner?.role !== 'keeper'
-    ? figures.filter(p => tacticalRoleOf(p) !== 'defender' || (ballA < -10 && Math.abs(origin.y) < 6))
+    ? figures.filter(p => tacticalRoleOf(p) !== 'defender' || ballA < 0
+      || Math.hypot(p.x - origin.x, p.y - origin.y) < 3)
       .sort((a, b) => pressureCost(a) - pressureCost(b) || a.id.localeCompare(b.id))[0] : undefined;
+  // Once a carrier enters our half, cover the actual ball-to-goal lane,
+  // not a role's kickoff lane or an unconditional depth below midfield.
+  const activeDefense = !ownBall && owner?.role === 'outfield' && ballA < 0;
+  const screenFraction = Math.min(0.5, 3 / (Math.hypot(-sign * FIELD.width / 2 - origin.x, origin.y) || 1));
+  const shotScreen = {x: origin.x + (-sign * FIELD.width / 2 - origin.x) * screenFraction,
+    y: origin.y * (1 - screenFraction)};
+  const coveringDefenders = figures.filter(p => tacticalRoleOf(p) === 'defender' && p.id !== presser?.id);
+  const shotCover = [...coveringDefenders].sort((a,b) =>
+    Math.hypot(a.x-shotScreen.x,a.y-shotScreen.y) - Math.hypot(b.x-shotScreen.x,b.y-shotScreen.y)
+    || a.id.localeCompare(b.id))[0];
+  const receiver = opponents.filter(p => p.id !== owner?.id && p.x * sign <= ballA + 1
+    && Math.hypot(p.x-origin.x,p.y-origin.y) >= 2 && Math.hypot(p.x-origin.x,p.y-origin.y) <= 12)
+    .sort((a,b) => (a.x*sign + Math.abs(a.y)*0.35) - (b.x*sign + Math.abs(b.y)*0.35)
+      || a.id.localeCompare(b.id))[0];
+  const passScreen = receiver ? {x: origin.x + (receiver.x-origin.x)*0.55,
+    y: origin.y + (receiver.y-origin.y)*0.55} : undefined;
+  const spareScreen = passScreen && Math.hypot(passScreen.x-shotScreen.x,passScreen.y-shotScreen.y) > 1.4
+    ? passScreen : {x:shotScreen.x-sign*1.5,y:shotScreen.y+(origin.y > 0 ? -1.8 : 1.8)};
   const intents = figures.map(p => {
     const role = tacticalRoleOf(p);
     let x = p.x, y = p.y;
@@ -85,8 +104,14 @@ export function planTeamMovement(state: GameState, team: Team): TacticalIntent[]
       action = role === 'attacker' ? 'hold' : 'cover';
     } else {
       if (role === 'defender') {
-        x = clamp(enemyAttacker.x * sign - 2, -12, -4) * sign;
-        y = clamp(enemyAttacker.y * 0.65, -4.5, 4.5); action = 'cover';
+        if (activeDefense) {
+          const screen = p.id === shotCover?.id ? shotScreen : spareScreen;
+          x = screen.x; y = screen.y; arrivalRadius = 0.35;
+        } else {
+          x = clamp(enemyAttacker.x * sign - 2, -12, -4) * sign;
+          y = clamp(enemyAttacker.y * 0.65, -4.5, 4.5);
+        }
+        action = 'cover';
       } else if (role === 'midfielder') {
         x = clamp((enemyMiddle.x + enemyAttacker.x) * sign / 2, -9, 3) * sign;
         y = clamp((enemyMiddle.y + enemyAttacker.y) / 2, -6.5, 6.5); action = 'cover';
@@ -96,7 +121,8 @@ export function planTeamMovement(state: GameState, team: Team): TacticalIntent[]
     }
     const peers = teammates.filter(other => tacticalRoleOf(other) === role)
       .sort((a,b) => a.id.localeCompare(b.id));
-    if (peers.length > 1 && action !== 'press' && action !== 'carry') {
+    if (peers.length > 1 && action !== 'press' && action !== 'carry'
+      && !(activeDefense && role === 'defender')) {
       const lane = peers.findIndex(other => other.id === p.id);
       y = clamp((lane - (peers.length - 1) / 2) * 9 + origin.y * 0.2, -6.5, 6.5);
     }
@@ -106,7 +132,7 @@ export function planTeamMovement(state: GameState, team: Team): TacticalIntent[]
   // A manually driven teammate is deliberately not a formation constraint.
   for (const target of intents) {
     const p = figures.find(p => p.id === target.playerId)!;
-    if (tacticalRoleOf(p) !== 'defender' || target.action === 'press') continue;
+    if (tacticalRoleOf(p) !== 'defender' || target.action === 'press' || activeDefense) continue;
     const upperDepth = Math.min(-8, ...intents.filter(other =>
       tacticalRoleOf(figures.find(p => p.id === other.playerId)!) !== 'defender')
       .map(other => other.x * sign - 3));
