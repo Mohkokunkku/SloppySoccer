@@ -30,7 +30,18 @@ test('a complete one-minute match saves exactly once to the real backend', async
   await page.getByRole('radio', { name:'1 min', exact:true }).check();
   await page.getByRole('radio', { name:'Hard', exact:true }).check();
   await startPartyMatch(page);
+  await expect(page.locator('#pitch')).toHaveAttribute('data-phase','finished',{timeout:110_000});
+  await expect(page.locator('#phase-label')).toHaveText(/Victory party|Honours even/);
+  await expect(page.locator('#pitch')).toHaveAttribute('data-post-match-active','true');
+  const finalScore=await page.locator('#home-score').innerText()+'-'+await page.locator('#away-score').innerText();
+  await page.locator('#pause').click();
+  const partyTime=await page.locator('#pitch').getAttribute('data-post-match-elapsed');
+  const partyPositions=await page.locator('#pitch').getAttribute('data-player-positions');await page.waitForTimeout(350);
+  expect(await page.locator('#pitch').getAttribute('data-post-match-elapsed')).toBe(partyTime);
+  expect(await page.locator('#pitch').getAttribute('data-player-positions')).toBe(partyPositions);
+  await page.locator('#resume').click();
   await expect(page.locator('#phase-label')).toHaveText('Full time', {timeout:130_000});
+  expect(await page.locator('#home-score').innerText()+'-'+await page.locator('#away-score').innerText()).toBe(finalScore);
   await expect(page.locator('#save-status')).toHaveText('Final score saved to the clubhouse.', {timeout:10_000});
   expect(posts).toHaveLength(1);
   const submitted = JSON.parse(posts[0]);

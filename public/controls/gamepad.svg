@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 440 340" role="img" aria-labelledby="title">
+<title id="title">Standard gamepad: left stick move, Cross or A pass, hold Circle or B and release to shoot, L1 or LB switch, R2 or RT sprint, Options or Menu pause</title>
+<rect width="440" height="340" rx="14" fill="#182d3d"/><g font-family="Arial,sans-serif" text-anchor="middle">
+<text x="220" y="29" fill="#fff5df" font-size="22" font-weight="bold">Standard gamepad</text>
+<g fill="#fff5df" font-size="16"><text x="97" y="59">L1 / LB · switch</text><text x="337" y="59">R2 / RT · sprint</text></g>
+<g fill="#7ce9ff" stroke="#122a3b" stroke-width="3"><rect x="79" y="83" width="72" height="27" rx="9"/><rect x="287" y="73" width="65" height="37" rx="9" fill="#ffb36b"/></g>
+<path d="M105 108Q78 107 65 137L39 229Q34 260 61 261Q80 263 104 220L154 203H286L335 247Q362 276 387 254Q401 244 394 218L371 137Q362 108 335 108Z" fill="#566a7c" stroke="#b0bec7" stroke-width="3"/>
+<path d="M94 129h20v20h20v20h-20v20H94v-20H74v-20h20z" fill="#213747"/>
+<circle cx="149" cy="201" r="30" fill="#aaff8c" stroke="#122a3b" stroke-width="3"/><circle cx="149" cy="201" r="20" fill="#405f42"/>
+<circle cx="267" cy="202" r="27" fill="#213747"/>
+<rect x="177" y="122" width="78" height="42" rx="8" fill="#213747"/><rect x="268" y="124" width="14" height="19" rx="5" fill="#ffe183"/>
+<g stroke="#122a3b" stroke-width="2"><circle cx="333" cy="132" r="16" fill="#84929d"/><circle cx="306" cy="159" r="16" fill="#84929d"/><circle cx="360" cy="159" r="17" fill="#ff91d5"/><circle cx="333" cy="186" r="17" fill="#7ce9ff"/></g>
+<g fill="#142a3a" font-size="17" font-weight="bold"><text x="360" y="165">○ B</text><text x="333" y="192">× A</text></g>
+<g fill="none" stroke="#fff5df" stroke-width="2"><path d="M98 65L112 84M337 65L322 74M274 122L263 89M135 226L107 253"/></g>
+<g fill="#fff5df" font-size="15"><text x="228" y="85">Menu / Options · pause</text><text x="100" y="275">Left stick · move</text></g>
+<text x="220" y="301" fill="#ffbce5" font-size="18">○ / B · hold, then release to shoot</text><text x="220" y="325" fill="#9ceeff" font-size="18">× / A · pass</text></g></svg>

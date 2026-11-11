@@ -3,6 +3,7 @@ import * as THREE from 'three';
 import { buildTabletop, createFigure, createFootball, cameraBounds, poseFigure } from './scene';
 import { FIELD, type Player } from '../shared/types';
 import {TEAMS} from './teams';
+import {DEFAULT_TUNING} from '../shared/tuning';
 
 it('frames the entire tabletop at both desktop and portrait aspect ratios', () => {
   for (const aspect of [2.2, 1.7, 1, 0.7]) {
@@ -43,8 +44,8 @@ describe('offline procedural toy geometry', () => {
     expect(table.getObjectByName('oak-plinth')).toBeDefined();
     expect(table.getObjectByName('goal-home')).toBeDefined();
     expect(table.getObjectByName('goal-away')).toBeDefined();
-    expect(table.getObjectByName('goal-home')!.position.x).toBe(-16);
-    expect(table.getObjectByName('goal-away')!.position.x).toBe(16);
+    expect(table.getObjectByName('goal-home')!.position.x).toBe(-DEFAULT_TUNING.fieldWidth/2);
+    expect(table.getObjectByName('goal-away')!.position.x).toBe(DEFAULT_TUNING.fieldWidth/2);
     expect(table.getObjectByName('goal-home')!.getObjectByName('lattice')).toBeInstanceOf(THREE.InstancedMesh);
   });
   it('creates separately articulated limbs, facial detail and tall black boots', () => {

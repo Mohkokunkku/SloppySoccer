@@ -4,13 +4,14 @@ import { mountLocalLobby } from './local-lobby';
 // Minimal DOM unit double: browser rendering and event propagation remain integration checks.
 class ElementDouble {
   tagName: string; id = ''; textContent = ''; value = ''; checked = false; disabled = false; type = ''; className = '';
-  children: ElementDouble[] = []; listeners = new Map<string, (() => void)[]>();
+  parent:ElementDouble|null=null;hidden=false;
+  children: ElementDouble[] = []; listeners = new Map<string, ((event:any) => void)[]>();
   constructor(tag: string) { this.tagName = tag; }
-  append(...items: ElementDouble[]) { this.children.push(...items); }
+  append(...items: ElementDouble[]) { for(const item of items){if(item.parent)item.parent.children=item.parent.children.filter(child=>child!==item);this.children.push(item);item.parent=this;} }
   replaceChildren(...items: ElementDouble[]) { this.children = items; }
-  addEventListener(name: string, fn: () => void) { this.listeners.set(name, [...this.listeners.get(name) ?? [], fn]); }
+  addEventListener(name: string, fn: (event:any) => void) { this.listeners.set(name, [...this.listeners.get(name) ?? [], fn]); }
   setAttribute() {}
-  fire(name: string) { for (const fn of this.listeners.get(name) ?? []) fn(); }
+  fire(name: string,event:any={preventDefault(){},stopPropagation(){}}) { for (const fn of this.listeners.get(name) ?? []) fn(event); }
   find(id: string): ElementDouble | undefined { return this.id === id ? this : this.children.map(child => child.find(id)).find(Boolean); }
 }
 function setup(pads: { index: number; connected: boolean; mapping: string }[] = []) {
@@ -49,5 +50,21 @@ describe('local lobby', () => {
     expect(get('seat-p1-status').textContent).toContain('unmapped');
     pads.length = 0; lobby.refreshDevices();
     expect(device.value).toBe('gamepad:2'); expect(get('seat-p1-status').textContent).toContain('disconnected');
+  });
+  it('renders tokens inside team zones with device hints and moves once per click', () => {
+    const { host, get, change } = setup();
+    const zones = host.find('local-lobby')!.children.find(child => child.className === 'team-drop-zones')!;
+    const token=get('seat-p1-token');expect(zones.children[0].children).toContain(token);expect(token.textContent).toContain('P1');expect(token.textContent).toContain('⌨');
+    get('seat-p1-enabled').checked = true;
+    token.fire('click');
+    expect(get('seat-p1-team').value).toBe('away');
+    expect(zones.children[1].children).toContain(token);expect(zones.children[0].children).not.toContain(token);
+    expect(change).toHaveBeenCalledTimes(1);
+  });
+  it('accepts drag/drop once and rejects locked or disabled seat drops',()=>{
+    const {lobby,get,change}=setup(),away=get('team-away-zone'),home=get('team-home-zone');
+    const event={preventDefault(){},dataTransfer:{getData:()=> '1'}};away.fire('drop',event);expect(get('seat-p1-team').value).toBe('away');expect(change).toHaveBeenCalledTimes(1);
+    lobby.setLocked(true);home.fire('drop',event);get('seat-p1-token').fire('click');expect(get('seat-p1-team').value).toBe('away');expect(change).toHaveBeenCalledTimes(1);
+    lobby.setLocked(false);home.fire('drop',{...event,dataTransfer:{getData:()=> '2'}});expect(change).toHaveBeenCalledTimes(1);
   });
 });

@@ -7,7 +7,10 @@ import {mountTuningPanel} from './tuning-panel';
 import {GameAudio} from './audio';
 import {suspendGame} from './suspension';
 import {DANCE_NAMES,celebrationStyle} from './celebrations';
-import { createGame, startGame, skipIntro } from '../shared/engine';
+import { createGame, startGame, skipIntro, cancelShotCharges } from '../shared/engine';
+import { KickMeters } from './kick-meters';
+import { renderControlGuide } from './controls-guide';
+import { PostMatchDirector, POST_MATCH_THEME_NAMES } from './post-match';
 import { stepQueuedGame } from './queued-game-step';
 import { DEFAULT_CONFIG, type MatchConfig, type MatchResult, type LocalSeat } from '../shared/types';
 import { assignLocalControls, humanControls } from '../shared/local-controls';
@@ -48,6 +51,7 @@ app.innerHTML = `
       <div class="stage has-overlay" id="stage">
         <div class="pitch" id="pitch"></div>
         <p class="goal-banner" id="goal-banner" role="status" hidden></p>
+        <aside id="party-hud" hidden aria-label="Full-time celebration"><span id="party-title"></span><button id="skip-party" class="quiet-button" type="button">Skip celebration</button></aside>
         <aside class="match-panel" id="match-panel" aria-labelledby="panel-title">
           <div class="toy-label" aria-hidden="true">5-a-side tabletop football</div>
           <h1 id="panel-title">Small teams.<br>Big nonsense.</h1>
@@ -74,14 +78,15 @@ app.innerHTML = `
           <div id="finished-actions" hidden><p class="final-score" id="final-score"></p><p class="save-status" id="save-status" role="status"></p><button class="primary-button" id="rematch" type="button">Play again <span aria-hidden="true">↻</span></button><button class="secondary-button" id="new-setup" type="button">Change match settings</button></div>
         </aside>
       </div>
+      <div id="kick-meter-host" aria-label="Kick power meters" hidden></div>
       <div class="control-strip">
         <p class="team-note" id="local-team-note">P1 Spain →</p>
         <p class="team-note" aria-live="polite">Selected: <span id="controlled-role">Attacker</span></p>
-        <div class="keyboard-guide" id="local-control-guide" aria-label="Active local player controls"></div>
+        <details id="control-help" class="control-help" open><summary>Keyboard &amp; controller diagrams</summary><div class="keyboard-guide" id="local-control-guide" aria-label="Local player control diagrams"></div></details>
         <button class="quiet-button touch-toggle" id="touch-toggle" type="button" aria-pressed="false" aria-controls="touch-controls">Touch controls</button>
       </div>
       <p id="local-input-status" class="local-input-status" role="status"></p>
-      <div class="match-extras"><span class="role-legend">A Attacker &nbsp; M Midfield &nbsp; D Defender &nbsp; GK Keeper</span><button id="sound-toggle" type="button" class="quiet-button" aria-pressed="false">Sound off</button><button id="sound-test" type="button" class="quiet-button">Test sound</button><a href="/celebrations.html">Preview goal dances</a><span id="audio-status" role="status"></span></div>
+      <div class="match-extras"><span class="role-legend">A Attacker &nbsp; M Midfield &nbsp; D Defender &nbsp; GK Keeper</span><button id="sound-toggle" type="button" class="quiet-button" aria-pressed="false">Sound off</button><button id="sound-test" type="button" class="quiet-button">Test sound</button><a href="/celebrations.html">Preview goal dances</a><a href="/victory.html">Preview victory parties</a><span id="audio-status" role="status"></span></div>
       <div class="match-extras"><button id="sound-crowd" type="button" class="quiet-button">Hear crowd</button><button id="sound-goal" type="button" class="quiet-button">Hear goal music</button><details class="audio-credits"><summary>Audio credits</summary><p>Crowd: “Free Crowd Cheering Sounds” by Gregor Quendel, CC BY 4.0 (edited excerpts). Human voices and impacts: Kenney, CC0. Goal music: original synthesized instrumental. <a href="/audio-v2/CREDITS.md" target="_blank" rel="noopener">Sources, changes and licences</a></p></details></div>
       <div id="tuning-host"></div>
       <div class="touch-controls" id="touch-controls" aria-label="Touch game controls" hidden>
@@ -121,6 +126,7 @@ const inputQueue = new LocalInputQueue();
 const stepper = new FixedStepper();
 const saves = new SaveOnce();
 const audio = new GameAudio();
+const kickMeters = new KickMeters(element('kick-meter-host'));
 let config: MatchConfig = { ...DEFAULT_CONFIG };
 let tuning = {...DEFAULT_TUNING};
 let localSeats:LocalSeat[]=[{id:'p1',team:'home',device:'keyboard1'}];
@@ -137,6 +143,7 @@ let matchNumber = 0;
 let currentMatch = '';
 let settingsTouched = false;
 let finishedHandled = false;
+let postMatch:PostMatchDirector|null=null;
 let localResults: MatchResult[] = [];
 let serverResults: MatchResult[] = [];
 let storageAvailable = true;
@@ -197,6 +204,7 @@ function applyConfig(): void {
 function focusPitch(): void { pitch.querySelector('canvas')?.focus({ preventScroll: true });stage.closest('.game-box')?.scrollIntoView({block:'start',behavior:'instant'}); }
 function clearInput(): void {
   input.clear(); inputQueue.clear(); stepper.reset(); lastFrame = 0;
+  cancelShotCharges(state);
   document.querySelectorAll('.is-held').forEach(button => button.classList.remove('is-held'));
 }
 function beginMatch(): void {
@@ -210,6 +218,8 @@ function beginMatch(): void {
   state = configuredGame(config); // Stable IDs; role/mould changes are renderer-owned.
   currentMatch = `match-${Date.now()}-${++matchNumber}`;
   finishedHandled = false;
+  postMatch = null;
+  element<HTMLDetailsElement>('control-help').open=false;
   paused = false;
   clearInput();
   audio.reset();void audio.unlock();
@@ -217,7 +227,7 @@ function beginMatch(): void {
   updateUI(); focusPitch();
 }
 function setPaused(value: boolean, moveFocus = true): void {
-  if (state.phase !== 'playing' && state.phase !== 'goal' && state.phase !== 'resetting' && state.phase !== 'entering' && state.phase !== 'intro') return;
+  if (state.phase !== 'playing' && state.phase !== 'goal' && state.phase !== 'resetting' && state.phase !== 'entering' && state.phase !== 'intro' && !postMatch?.view.active) return;
   paused = value;if(paused)audio.quiet();clearInput(); updateUI();
   if (moveFocus) {
     if (paused) element('resume').focus({ preventScroll: true });
@@ -225,7 +235,8 @@ function setPaused(value: boolean, moveFocus = true): void {
   }
 }
 function resetSetup(): void {
-  audio.quiet();state = configuredGame(config); paused = false; finishedHandled = false;
+  element<HTMLDetailsElement>('control-help').open=true;
+  audio.quiet();postMatch=null;state = configuredGame(config); paused = false; finishedHandled = false;
   clearInput(); updateUI(); element('start').focus({ preventScroll: true });
 }
 function setText(node: HTMLElement, value: string): void {
@@ -238,7 +249,12 @@ function updateUI(): void {
   setText(element('controlled-role'), controlledRoleLabel(state));
   setText(element('local-team-note'),humanControls(state).map(control=>`${control.seatId.toUpperCase()} ${control.team==='home'?'Spain →':'Argentina ←'}`).join(' · '));
   const guide=localControlGuide(localSeats);
-  setText(element('local-control-guide'),guide);
+  renderControlGuide(element('local-control-guide'),localSeats);
+  kickMeters.update(state);
+  const partyActive=state.phase==='finished'&&Boolean(postMatch?.view.active);
+  element('party-hud').hidden=!partyActive||paused;
+  const partyView=postMatch?.view;
+  setText(element('party-title'),partyView?.winner?`${partyView.winner==='home'?'Spain':'Argentina'} wins · ${POST_MATCH_THEME_NAMES[partyView.theme]}`:'Honours even · Thanks for playing');
   const canvas=pitch.querySelector('canvas');
   const pitchLabel=`Sloppy Soccer tabletop pitch. ${guide}`;
   if(canvas&&canvas.getAttribute('aria-label')!==pitchLabel)canvas.setAttribute('aria-label',pitchLabel);
@@ -250,8 +266,8 @@ function updateUI(): void {
   const selectedRole = state.players.find(player => player.id === state.controlledId)?.tacticalRole;
   const hint = roleHint(selectedRole);
   if (element('controlled-role').title !== hint) element('controlled-role').title = hint;
-  const view = matchPresentation(state.phase, paused, state.score.home, state.score.away);
-  const phaseLabel = paused ? 'Paused' : state.phase === 'ready' ? 'Kick-off' : state.phase === 'entering' ? 'Teams entering' : state.phase === 'intro' ? 'Team spotlight' : state.phase === 'finished' ? 'Full time' : state.phase === 'goal' ? 'Goal!' : state.phase==='resetting'?'Back to kick-off':'In play';
+  const view = partyActive ? {overlay:paused?'paused':'none',title:'Taking a victory breather.'} : matchPresentation(state.phase, paused, state.score.home, state.score.away);
+  const phaseLabel = paused ? 'Paused' : partyActive ? (partyView?.winner?'Victory party':'Honours even') : state.phase === 'ready' ? 'Kick-off' : state.phase === 'entering' ? 'Teams entering' : state.phase === 'intro' ? 'Team spotlight' : state.phase === 'finished' ? 'Full time' : state.phase === 'goal' ? 'Goal!' : state.phase==='resetting'?'Back to kick-off':'In play';
   setText(element('phase-label'), phaseLabel);
   const goal = element('goal-banner');
   goal.hidden = (state.phase !== 'goal' && state.phase !== 'entering') || paused;
@@ -260,7 +276,7 @@ function updateUI(): void {
   if (goal.textContent !== goalText) goal.textContent = goalText;
   goal.classList.toggle('cobalt-goal', state.lastScorer === 'away');
   goal.classList.toggle('entry-banner',state.phase==='entering');
-  pauseButton.disabled = !renderer || (state.phase !== 'playing' && state.phase !== 'goal' && state.phase !== 'resetting' && state.phase !== 'entering' && state.phase !== 'intro');
+  pauseButton.disabled = !renderer || (!partyActive && state.phase !== 'playing' && state.phase !== 'goal' && state.phase !== 'resetting' && state.phase !== 'entering' && state.phase !== 'intro');
   setText(pauseButton, paused ? 'Resume' : 'Pause');
   restartButton.disabled = !renderer || state.phase === 'ready';
   const soundButton=element<HTMLButtonElement>('sound-toggle');setText(soundButton,audio.enabled?'Sound on':'Sound off');soundButton.setAttribute('aria-pressed',String(audio.enabled));soundButton.dataset.played=String(audio.played);soundButton.dataset.active=String(audio.activeCount);soundButton.dataset.pending=String(audio.pendingCount);setText(element('audio-status'),audio.lastError??'');
@@ -325,6 +341,7 @@ element('rematch').addEventListener('click', beginMatch);
 element('new-setup').addEventListener('click', resetSetup);
 element('change-players').addEventListener('click',resetSetup);
 element('skip-intro').addEventListener('click',()=>{if(paused)return;skipIntro(state);clearInput();updateUI();focusPitch();});
+element('skip-party').addEventListener('click',()=>{if(!postMatch?.view.active)return;postMatch.skip();audio.quiet();paused=false;clearInput();updateUI();});
 localLobby=mountLocalLobby(element('local-lobby-host'),seats=>{settingsTouched=true;localSeats=seats;input.setSeats(seats);if(state.phase==='ready'){state=configuredGame(config);updateUI();}});
 localSeats=localLobby.readSeats();input.setSeats(localSeats);
 const refreshDevices=()=>{localLobby?.refreshDevices();};
@@ -363,14 +380,15 @@ for (const [index,button] of [...document.querySelectorAll<HTMLButtonElement>('[
   });
   const release = (event: PointerEvent) => { input.pointerUp(event.pointerId); button.classList.remove('is-held'); };
   button.addEventListener('pointerup', release);
-  button.addEventListener('pointercancel', release);
-  button.addEventListener('lostpointercapture', release);
+  const cancel = (event:PointerEvent) => {if(!button.classList.contains('is-held'))return;clearInput();input.pointerUp(event.pointerId);button.classList.remove('is-held');};
+  button.addEventListener('pointercancel', cancel);
+  button.addEventListener('lostpointercapture', cancel);
   button.addEventListener('contextmenu', event => event.preventDefault());
   button.addEventListener('keydown', event => {
     if (event.code === 'Space' || event.code === 'Enter') { event.preventDefault(); if (!paused && state.phase === 'playing') input.pointerDown(-index-1,code); }
   });
   button.addEventListener('keyup', event => { if (event.code === 'Space' || event.code === 'Enter') { event.preventDefault(); input.pointerUp(-index-1); } });
-  button.addEventListener('blur', () => input.pointerUp(-index-1));
+  button.addEventListener('blur', () => {clearInput();input.pointerUp(-index-1);});
 }
 const touchToggle = element<HTMLButtonElement>('touch-toggle');
 const touchControls = element('touch-controls');
@@ -416,13 +434,19 @@ try {
     }else{
       inputQueue.clear();
     }
-    updateUI();
     if (state.phase === 'finished' && !finishedHandled) {
       finishedHandled = true;
+      postMatch=new PostMatchDirector(state,currentMatch);
+      clearInput();audio.quiet();
       // finishMatch handles expected failures; this also catches storage/UI failures.
       void finishMatch().catch(() => { element('save-status').textContent = 'Score could not be saved. You can still play again.'; });
     }
-    renderer?.render(state, now,paused);
+    if(postMatch?.view.active){
+      const view=postMatch.update(delta,paused||document.hidden||inputBoundary);
+      if(!paused&&!document.hidden){if(view.active)audio.updatePostMatch(view);else audio.quiet();}
+    }
+    updateUI();
+    renderer?.render(state, now,paused,postMatch?.view);
   });
   updateUI();
 } catch { webglError(); }

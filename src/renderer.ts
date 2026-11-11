@@ -9,8 +9,9 @@ import {tacticalRoleOf} from '../shared/tactics';
 import {celebrationStyle} from './celebrations';
 import {humanControls} from '../shared/local-controls';
 import {introCamera} from './cinematic';
+import type {PostMatchView} from './post-match';
 import {TEAMS} from './teams';
-import { buildTabletop, disposeTabletop, cameraBounds, COLORS, createFigure, createFootball, poseFigure, shadowTexture, type FigureRig } from './scene';
+import { buildTabletop, disposeTabletop, cameraBounds, COLORS, createFigure, createFootball, poseFigure, setFigureExpression, shadowTexture, type FigureRig } from './scene';
 const SEAT_COLORS=[0xffe183,0x7ce9ff,0xff91d5,0xaaff8c];
 
 /** Presentation only. shared/engine.ts is the sole owner of simulation. */
@@ -143,6 +144,29 @@ export class ToyRenderer {
     this.host.dataset.introShot=state.phase!=='intro'?'wide':this.reducedMotion.matches?'teams':progress===0?'home':progress===1?'away':'transition';
   }
 
+  private updatePartyCamera(state:GameState,view:PostMatchView,paused:boolean):void {
+    Object.assign(this.host.dataset,{postMatchActive:String(view.active),postMatchTheme:String(view.theme),postMatchSegment:view.segment,postMatchWinner:view.winner??'draw',postMatchElapsed:view.elapsed.toFixed(3)});
+    if(paused)return;
+    const bounds=cameraBounds(Math.max(.1,this.host.clientWidth/Math.max(1,this.host.clientHeight)),this.tuning,this.entryHeight);
+    const reduced=this.reducedMotion.matches,aspect=bounds.width/bounds.height;
+    let width=bounds.width,height=bounds.height;
+    if(!reduced&&(view.segment==='winners'||view.segment==='losers')){
+      const roster=state.players.filter(p=>view.segment==='losers'?p.team!==view.winner:p.team===view.winner);
+      const shot=view.segment==='losers'?view.elapsed-6:view.elapsed;
+      const player=roster[Math.min(roster.length-1,Math.floor(shot/2))],rig=player?this.figures.get(player.id):undefined;
+      const face=rig?.root.getObjectByName('face');rig?.root.updateMatrixWorld(true);
+      const point=face?.localToWorld(new THREE.Vector3(0,0,1))??rig?.root.position.clone()??new THREE.Vector3();
+      const yaw=(rig?.root.rotation.y??0)+.2+Math.sin(shot*.7)*.12;
+      height=4.4+view.theme*.25;width=height*aspect;
+      this.camera.position.set(point.x+Math.sin(yaw)*7,point.y+.8,point.z+Math.cos(yaw)*7);this.camera.lookAt(point);
+    }else if(!reduced&&view.segment==='finale'){
+      width=Math.min(bounds.width,24);height=width/aspect;
+      const angle=view.elapsed*.18+view.theme*.6;
+      this.camera.position.set(Math.sin(angle)*17,12,Math.cos(angle)*17);this.camera.lookAt(0,1,0);
+    }else {this.camera.position.set(3,34,29);this.camera.lookAt(0,-.2,0);}
+    this.camera.left=-width/2;this.camera.right=width/2;this.camera.top=height/2;this.camera.bottom=-height/2;this.camera.updateProjectionMatrix();this.camera.updateMatrixWorld();this.host.dataset.cameraMode=reduced?'wide':'post-match';
+  }
+
   private resize(): void {
     this.needsFrame=true;
     const finiteSize=(value:number)=>Number.isFinite(value)&&value>0?value:1;
@@ -158,7 +182,7 @@ export class ToyRenderer {
     this.renderer.setAnimationLoop(now => frame(now));
   }
 
-  render(state: GameState, now: number, paused=false): void {
+  render(state: GameState, now: number, paused=false, postMatch?:PostMatchView): void {
     const dt = Math.min(0.05, Math.max(0, (now - this.lastRender) / 1000)); this.lastRender = now;
     this.tuning=getTuning(state);
     this.entryHeight=state.phase==='entering'?(state.entrance?.fieldHeight??this.tuning.fieldHeight):this.tuning.fieldHeight;
@@ -168,23 +192,34 @@ export class ToyRenderer {
       this.geometrySignature=this.signature();this.boardRebuilds++;this.resize();
 
     }
-    const staticScene=paused||state.phase==='ready'||state.phase==='finished';
-    const staticKey=JSON.stringify([state.phase,paused,this.reducedMotion.matches,state.formations,state.controls,state.controlledId,state.players.map(p=>[p.id,p.team,p.role,p.tacticalRole])]);
+    const party=Boolean(postMatch?.active&&state.phase==='finished');
+    const staticScene=paused||state.phase==='ready'||(state.phase==='finished'&&!party);
+    const staticKey=JSON.stringify([state.phase,paused,this.reducedMotion.matches,state.formations,state.controls,state.controlledId,state.players.map(p=>[p.id,p.team,p.role,p.tacticalRole]),postMatch?.active,postMatch?.id,postMatch?.theme,postMatch?.segment]);
     if(staticScene&&!this.needsFrame&&this.staticState===state&&this.staticKey===staticKey)return;
     this.staticState=staticScene?state:null;this.staticKey=staticKey;this.needsFrame=false;
     if(this.motionState!==state||state.phase==='ready')this.motionTime=0;
-    if(!paused&&(state.phase==='playing'||state.phase==='resetting'||state.phase==='entering'||state.phase==='intro'))this.motionTime+=dt;
+    if(!paused&&(state.phase==='playing'||state.phase==='resetting'||state.phase==='entering'||state.phase==='intro'||party))this.motionTime+=dt;
     this.syncFigures(state);
     const controls=humanControls(state);
     for(const [seat,badge] of this.seatBadges)if(!controls.some(c=>c.seatId===seat&&this.markers.has(c.playerId))){badge.remove();this.seatBadges.delete(seat);}
     const positions:Record<string,{x:number;z:number}>={};
     state.players.forEach((player,index)=>{
       const rig=this.figures.get(player.id);
-      const cheer=state.phase==='intro'?{style:celebrationStyle(1),seconds:6.5-state.phaseTimer,index:index%5}:state.phase==='goal'&&state.lastScorer===player.team?{style:celebrationStyle(state.score.home+state.score.away),seconds:5-state.phaseTimer,index:index%5}:undefined;
-      if(rig&&!paused)poseFigure(rig,player,this.motionTime,this.reducedMotion.matches,cheer);
+      const partyWinner=party&&postMatch!.winner===player.team;
+      const partyLoser=party&&postMatch!.winner!==null&&postMatch!.winner!==player.team;
+      const cheer=partyWinner?{style:celebrationStyle(postMatch!.theme+1),seconds:postMatch!.elapsed,index:(index+postMatch!.theme)%5}:state.phase==='intro'?{style:celebrationStyle(1),seconds:6.5-state.phaseTimer,index:index%5}:state.phase==='goal'&&state.lastScorer===player.team?{style:celebrationStyle(state.score.home+state.score.away),seconds:5-state.phaseTimer,index:index%5}:undefined;
+      let posed=player;
+      if(party&&!this.reducedMotion.matches&&postMatch!.winner){
+        const i=state.players.filter(p=>p.team===player.team).findIndex(p=>p.id===player.id),theme=postMatch!.theme;
+        const angle=i*Math.PI*2/5;
+        const x=partyLoser?(postMatch!.winner==='home'?8:-8):theme===1?Math.cos(angle)*2.4:theme===2?Math.floor(i/3)*1.7-1:(i%2)*1.2-.6;
+        const y=partyLoser?(i-2)*1.5:theme===1?Math.sin(angle)*2.4:theme===2?(i%3-1)*1.8:(i-2)*1.6;
+        posed={...player,x,y,vx:0,vy:0,facing:player.team==='home'?0:Math.PI};
+      }
+      if(rig&&!paused){poseFigure(rig,posed,this.motionTime,this.reducedMotion.matches,cheer);if(partyWinner)setFigureExpression(rig,'happy');else if(partyLoser){setFigureExpression(rig,'frustrated');if(!this.reducedMotion.matches){rig.body.rotation.x=-0.42;rig.body.rotation.z=0.08*Math.sin(this.motionTime*2);rig.arms[0].rotation.z=-0.08;rig.arms[1].rotation.z=0.08;}}}
       positions[player.id]={x:rig?.root.position.x??player.x,z:rig?.root.position.z??player.y};
     });
-    this.updateCamera(state);
+    if(party)this.updatePartyCamera(state,postMatch!,paused);else {this.updateCamera(state);Object.assign(this.host.dataset,{postMatchActive:'false',postMatchTheme:'',postMatchSegment:'',postMatchWinner:''});}
     state.players.forEach(player => {
       const rig = this.figures.get(player.id);
       const marker=this.markers.get(player.id);
@@ -234,7 +269,7 @@ export class ToyRenderer {
       (this.ballShadow.material as THREE.MeshBasicMaterial).opacity = 0.9 / (1 + Math.max(0, ball.z) * 0.65);
     }
     const enteringCount=state.phase==='entering'?state.players.filter(player=>{const target=kickoffPosition(player.team,Number(player.id.split('-')[1]),'home',this.tuning,state.formations);return Math.hypot(player.x-target.x,player.y-target.y)>.05;}).length:0;
-    this.host.dataset.entryAnchorHeight=String(this.entryHeight);
+    this.host.dataset.entryAnchorHeight=String(this.entryHeight);this.host.dataset.ballRelease=JSON.stringify(ball.release??null);
     Object.assign(this.host.dataset,{phase:state.phase,fieldWidth:String(this.tuning.fieldWidth),fieldHeight:String(this.tuning.fieldHeight),goalWidth:String(this.tuning.goalWidth),goalHeight:String(this.tuning.goalHeight),ballRotation:`${this.ball.rotation.x},${this.ball.rotation.y},${this.ball.rotation.z}`,ballPosition:`${ball.x},${ball.y},${ball.z}`,runPhase:String(this.figures.values().next().value?.locomotion?.phase??0),entryCount:String(enteringCount),boardRebuilds:String(this.boardRebuilds)});
     this.renderer.render(this.scene, this.camera);
     this.host.dataset.framesRendered=String(this.renderer.info?.render.frame??0);

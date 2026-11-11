@@ -1,11 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import { planTeamMovement } from './tactics.js';
-import { createGame, startGame, stepGame } from './engine';
+import { createGame, startGame, stepGame, kickoffPosition } from './engine';
+import {DEFAULT_TUNING} from './tuning';
 import { EMPTY_INPUT, FIELD, type GameState, type InputState } from './types';
 
 const frame = 1 / 60;
 const input = (changes: Partial<InputState> = {}): InputState => ({ ...EMPTY_INPUT, ...changes });
-const play = () => { const state = createGame(); startGame(state); return state; };
+// Legacy mechanics fixtures use an explicit canonical field; defaults have separate coverage.
+const play = () => { const state = createGame(); state.tuning={...DEFAULT_TUNING,fieldWidth:32,fieldHeight:20}; for(const p of state.players)Object.assign(p,kickoffPosition(p.team,Number(p.id.slice(-1)),'home',state.tuning,state.formations));startGame(state);return state; };
 const advance = (state: GameState, seconds: number, controls = input()) => {
   for (let i = 0; i < Math.round(seconds / frame); i++) stepGame(state, controls, frame);
 };
@@ -488,8 +490,8 @@ describe('tactical role identity', () => {
   it.each(['home', 'away'] as const)('starts %s with visibly distinct attacker, midfield and deep defense', team => {
     const state = createGame(); const sign = team === 'home' ? 1 : -1;
     const [attacker, middle, defender] = state.players.filter(p => p.team === team);
-    expect(defender!.x * sign).toBe(-10);
-    expect(middle!.x * sign).toBe(-5);
+    expect(defender!.x * sign).toBe(-10*DEFAULT_TUNING.fieldWidth/32);
+    expect(middle!.x * sign).toBe(-5*DEFAULT_TUNING.fieldWidth/32);
     expect(attacker!.x * sign).toBeGreaterThan(middle!.x * sign);
   });
   it.each(['home', 'away'] as const)('assigns one attacker, midfielder and defender to %s without changing keeper identity', team => {

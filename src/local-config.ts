@@ -20,5 +20,5 @@ export function localControlGuide(seats:readonly LocalSeat[]):string {
         ? 'arrows move, Enter shoot, / pass, . switch, Right Shift sprint'
         : `Controller ${Number(seat.device.slice(8))+1} (standard mapping): left stick move, Cross pass, Circle shoot, L1 switch, R2 sprint, Options pause`;
     return `${owner}: ${controls}`;
-  }).concat('Esc pause').join(' · ');
+  }).concat('Hold shot, release to kick','Esc pause').join(' · ');
 }

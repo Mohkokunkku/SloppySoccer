@@ -19,9 +19,9 @@ describe('five-a-side formations', () => {
     const expected = formation === '2-1-1' ? [[-1,0],[-5,0],[-10,-4.5],[-14.6,0],[-10,4.5]] : [[-1,0],[-5,-4.5],[-10,0],[-14.6,0],[-5,4.5]];
     for(let slot=0;slot<5;slot++) {
       const [x,y] = expected[slot]!;
-      expect(formationPosition('home',slot,false,DEFAULT_TUNING,formation)).toEqual({x,y});
+      expect(formationPosition('home',slot,false,DEFAULT_TUNING,formation)).toEqual({x:x!*DEFAULT_TUNING.fieldWidth/32,y:y!*DEFAULT_TUNING.fieldHeight/20});
       expect(formationPosition('away',slot,false,{...DEFAULT_TUNING,fieldWidth:48,fieldHeight:30},formation)).toEqual({x:-x!*1.5,y:y!*1.5});
     }
-    expect(formationPosition('home',0,true,DEFAULT_TUNING,formation)).toEqual({x:-3,y:0});
+    expect(formationPosition('home',0,true,DEFAULT_TUNING,formation)).toEqual({x:-3*DEFAULT_TUNING.fieldWidth/32,y:0});
   });
 });

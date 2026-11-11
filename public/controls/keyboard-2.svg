@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 440 290" role="img" aria-labelledby="title">
+<title id="title">Keyboard 2: arrows move, slash pass, period switch, right Shift sprint, hold Enter and release to shoot, Escape pause</title>
+<rect width="440" height="290" rx="14" fill="#182d3d"/><g font-family="Arial,sans-serif" text-anchor="middle">
+<text x="220" y="29" fill="#fff5df" font-size="22" font-weight="bold">Keyboard 2</text>
+<rect x="12" y="48" width="416" height="193" rx="12" fill="#405364" stroke="#8a9ba5" stroke-width="2"/>
+<rect x="24" y="59" width="84" height="27" rx="5" fill="#213747"/><text x="66" y="78" fill="#fff" font-size="14">Esc · pause</text>
+<path d="M25 97h39v30H25zM71 97h39v30H71zM117 97h39v30h-39zM163 97h39v30h-39zM39 135h39v30H39zM85 135h39v30H85zM131 135h39v30h-39zM25 174h39v30H25zM71 174h39v30H71zM117 174h39v30h-39zM70 211h145v17H70z" fill="#748391" stroke="#213747" stroke-width="2"/>
+<g stroke="#142a3a" stroke-width="2"><rect x="221" y="96" width="76" height="65" rx="6" fill="#ffe183"/><rect x="170" y="169" width="40" height="35" rx="6" fill="#ff91d5"/><rect x="218" y="169" width="40" height="35" rx="6" fill="#7ce9ff"/><rect x="227" y="211" width="82" height="22" rx="5" fill="#ffb36b"/>
+<g fill="#aaff8c"><rect x="354" y="132" width="31" height="34" rx="5"/><rect x="316" y="173" width="31" height="34" rx="5"/><rect x="354" y="173" width="31" height="34" rx="5"/><rect x="392" y="173" width="31" height="34" rx="5"/></g></g>
+<g fill="#142a3a" font-weight="bold"><text x="259" y="121" font-size="18">Enter</text><text x="259" y="144" font-size="13">hold / release</text><text x="190" y="194" font-size="26">.</text><text x="238" y="194" font-size="24">/</text><text x="268" y="227" font-size="13">Right Shift</text><g font-size="24"><text x="370" y="157">↑</text><text x="332" y="198">←</text><text x="370" y="198">↓</text><text x="408" y="198">→</text></g></g>
+<text x="220" y="266" fill="#fff5df" font-size="17">Arrows move · / pass · . switch · Shift sprint</text></g></svg>

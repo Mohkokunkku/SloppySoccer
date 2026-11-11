@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 440 290" role="img" aria-labelledby="title">
+<title id="title">Keyboard 1: WASD move, E pass, Q switch, left Shift sprint, hold Space and release to shoot, Escape pause</title>
+<rect width="440" height="290" rx="14" fill="#182d3d"/>
+<g font-family="Arial,sans-serif" text-anchor="middle"><text x="220" y="29" fill="#fff5df" font-size="22" font-weight="bold">Keyboard 1</text>
+<rect x="12" y="48" width="416" height="193" rx="12" fill="#405364" stroke="#8a9ba5" stroke-width="2"/>
+<rect x="24" y="59" width="84" height="27" rx="5" fill="#213747"/><text x="66" y="78" fill="#fff" font-size="14">Esc · pause</text>
+<g stroke="#142a3a" stroke-width="2"><rect x="24" y="96" width="50" height="40" rx="6" fill="#ff91d5"/><rect x="82" y="96" width="50" height="40" rx="6" fill="#aaff8c"/><rect x="140" y="96" width="50" height="40" rx="6" fill="#7ce9ff"/>
+<path d="M200 97h46v38h-46zM254 97h46v38h-46zM308 97h46v38h-46zM362 97h46v38h-46z" fill="#748391"/>
+<rect x="38" y="143" width="50" height="40" rx="6" fill="#aaff8c"/><rect x="96" y="143" width="50" height="40" rx="6" fill="#aaff8c"/><rect x="154" y="143" width="50" height="40" rx="6" fill="#aaff8c"/>
+<path d="M214 144h46v38h-46zM268 144h46v38h-46zM322 144h46v38h-46z" fill="#748391"/>
+<rect x="24" y="194" width="87" height="34" rx="6" fill="#ffb36b"/><rect x="123" y="194" width="244" height="34" rx="6" fill="#ffe183"/></g>
+<g fill="#142a3a" font-size="23" font-weight="bold"><text x="49" y="124">Q</text><text x="107" y="124">W</text><text x="165" y="124">E</text><text x="63" y="171">A</text><text x="121" y="171">S</text><text x="179" y="171">D</text></g>
+<g fill="#142a3a" font-size="15" font-weight="bold"><text x="67" y="216">Left Shift</text><text x="245" y="216">Space · hold / release shot</text></g>
+<text x="220" y="266" fill="#fff5df" font-size="17">WASD move · E pass · Q switch · Shift sprint</text></g></svg>

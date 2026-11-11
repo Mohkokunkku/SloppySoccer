@@ -3,6 +3,7 @@ import { formationPosition, formationRole, sanitizeFormations } from './formatio
 import { humanControls, controlledPlayerIds } from './local-controls.js';
 import { EMPTY_INPUT, type Formation } from './types.js';
 import { DEFAULT_TUNING, getTuning } from './tuning.js';
+import { chargedShotAngle, chargedShotPower } from './charged-shots.js';
 import type { GameTuning } from './types.js';
 import { DEFAULT_CONFIG, FIELD, type GameState, type InputState, type MatchConfig, type Player, type Team } from './types.js';
 
@@ -98,7 +99,8 @@ function dribble(state: GameState): void {
   state.ball.vx = owner.vx; state.ball.vy = owner.vy;
   state.ball.z = state.ball.vz = 0;
 }
-function shoot(state: GameState, player: Player, x: number, y: number): void {
+export function cancelShotCharges(state:GameState):void { delete state.shotCharges; }
+function shoot(state: GameState, player: Player, x: number, y: number, charge?:number): void {
   let dx = x || y ? x : Math.cos(player.facing);
   let dy = x || y ? y : Math.sin(player.facing);
   const length = Math.hypot(dx, dy) || 1;
@@ -115,6 +117,12 @@ function shoot(state: GameState, player: Player, x: number, y: number): void {
   state.ball.release={id:(state.ball.release?.id??0)+1,type:player.role==='keeper'?'clearance':'shot',playerId:player.id};
   state.ball.vx = dx / aimLength * getTuning(state).kickPower;
   state.ball.vy = dy / aimLength * getTuning(state).kickPower;
+  if(charge!==undefined){
+    const angle=chargedShotAngle(Math.atan2(dy,dx),state.ball.release.id,player.id,charge);
+    const power=chargedShotPower(getTuning(state).kickPower,charge);
+    state.ball.vx=Math.cos(angle)*power;state.ball.vy=Math.sin(angle)*power;
+  }
+  cancelShotCharges(state);
   state.ball.vz = 3.2;
   runtime(state).pickupLock = 0.24;
   runtime(state).kickerId = player.id;
@@ -135,6 +143,7 @@ function pass(state: GameState, player: Player, x: number, y: number): void {
   const distance = Math.hypot(tx, ty) || 1;
   state.ball.ownerId = null;
   state.ball.release={id:(state.ball.release?.id??0)+1,type:'pass',playerId:player.id};
+  cancelShotCharges(state);
   state.ball.vx = tx / distance * getTuning(state).passPower;
   state.ball.vy = ty / distance * getTuning(state).passPower;
   state.ball.vz = 0.8;
@@ -160,6 +169,7 @@ function kickoff(state: GameState, team: Team): void {
   delete state.entrance;
   const meta = runtime(state);
   meta.pickupLock = 0; meta.kickerId = null; meta.aiCooldowns.clear(); meta.tacticalPlans.clear();
+  cancelShotCharges(state);
 }
 function updateOutfieldAI(state: GameState, dt: number, config: Partial<MatchConfig>): void {
   // Plan both sides before moving either side; keep user control authoritative.
@@ -209,6 +219,7 @@ function contestPossession(state: GameState): void {
     && Math.hypot(p.x - state.ball.x, p.y - state.ball.y) < FIELD.playerRadius + FIELD.ballRadius)
     .sort((a, b) => Math.hypot(a.x - state.ball.x, a.y - state.ball.y) - Math.hypot(b.x - state.ball.x, b.y - state.ball.y))[0];
   if (challenger) {
+    cancelShotCharges(state);
     state.ball.ownerId = challenger.id;
     meta.kickerId = challenger.id; meta.pickupLock = 0.45;
     meta.aiCooldowns.set(challenger.id, 0.45);
@@ -242,13 +253,17 @@ export function stepGame(state: GameState, input: InputState, dt: number, config
   stepLocalGame(state,{p1:input},dt,config);
 }
 export function stepLocalGame(state: GameState, inputs:Record<string,InputState>, dt: number, config: Partial<MatchConfig> = {}, inputMode:'held'|'pulses'='held'): void {
+  if(state.phase!=='playing')cancelShotCharges(state);
   if (state.phase === 'ready' || state.phase === 'finished' || !Number.isFinite(dt) || dt <= 0) return;
   const meta=runtime(state), controls=humanControls(state);
+  for(const [seat,charge] of Object.entries(state.shotCharges??{}))
+    if(!controls.some(control=>control.seatId===seat&&control.playerId===charge.playerId)||state.ball.ownerId!==charge.playerId)
+      delete state.shotCharges![seat];
   const actions=controls.map(control=>{
     const input=inputs[control.seatId]??EMPTY_INPUT, previous=meta.edges.get(control.seatId)??EMPTY_INPUT;
     meta.edges.set(control.seatId,{...input});
     // Hub/queue pulses are already edges; consecutive true ticks can be distinct presses.
-    return {control,input,shotPressed:input.shoot&&(inputMode==='pulses'||!previous.shoot),passPressed:input.pass&&(inputMode==='pulses'||!previous.pass),switchPressed:input.switchPlayer&&(inputMode==='pulses'||!previous.switchPlayer)};
+    return {control,input,chargeStarted:input.chargeStart&&(inputMode==='pulses'||!previous.chargeStart),shotPressed:input.shoot&&(inputMode==='pulses'||!previous.shoot),passPressed:input.pass&&(inputMode==='pulses'||!previous.pass),switchPressed:input.switchPlayer&&(inputMode==='pulses'||!previous.switchPlayer)};
   });
   if(state.phase==='intro') {
     state.phaseTimer=Math.max(0,state.phaseTimer-Math.min(dt,.1));
@@ -294,7 +309,7 @@ export function stepLocalGame(state: GameState, inputs:Record<string,InputState>
   }
   dt = Math.min(dt, 0.1, state.timeRemaining);
   meta.pickupLock = Math.max(0, meta.pickupLock - dt);
-  for(const {control,input,switchPressed} of actions) {
+  for(const {control,input,switchPressed,chargeStarted,shotPressed} of actions) {
   if (switchPressed) {
     const claimed=new Set(controls.map(c=>c.playerId));
     const candidates = state.players.filter(p => p.team === control.team && p.role === 'outfield' && !claimed.has(p.id));
@@ -302,6 +317,16 @@ export function stepLocalGame(state: GameState, inputs:Record<string,InputState>
     if (candidates[0]) control.playerId = candidates[0].id;
   }
   const player = state.players.find(p => p.id === control.playerId);
+  const previousCharge=state.shotCharges?.[control.seatId];
+  if(previousCharge&&(previousCharge.playerId!==control.playerId||state.ball.ownerId!==control.playerId))delete state.shotCharges![control.seatId];
+  if(chargeStarted&&player&&state.ball.ownerId===player.id){
+    state.shotCharges??={};state.shotCharges[control.seatId]={playerId:player.id,value:0};
+  }
+  const activeCharge=state.shotCharges?.[control.seatId];
+  if(activeCharge){
+    if(input.shootHeld)activeCharge.value=Number.isFinite(input.shotCharge)?clamp(input.shotCharge!,0,1):0;
+    else if(!shotPressed&&!chargeStarted)delete state.shotCharges![control.seatId];
+  }
   if (player) {
     const x = axis(input.moveX), y = axis(input.moveY);
     const sprint = input.sprint && player.stamina > 0.08 && Math.hypot(x, y) > 0;
@@ -317,7 +342,12 @@ export function stepLocalGame(state: GameState, inputs:Record<string,InputState>
   updateAIAction(state, dt);
   for(const {control,input,shotPressed,passPressed} of actions) {
     const player=state.players.find(p=>p.id===control.playerId);
-    if (player && state.ball.ownerId === player.id && shotPressed) shoot(state, player, axis(input.moveX), axis(input.moveY));
+    if (player && state.ball.ownerId === player.id && shotPressed) {
+      const explicitCharge=input.shotCharge!==undefined;
+      if(!explicitCharge||state.shotCharges?.[control.seatId]?.playerId===player.id)
+        shoot(state, player, axis(input.moveX), axis(input.moveY),explicitCharge?(Number.isFinite(input.shotCharge)?clamp(input.shotCharge!,0,1):0):undefined);
+      if(explicitCharge&&state.shotCharges)delete state.shotCharges[control.seatId];
+    }
     else if (player && state.ball.ownerId === player.id && passPressed) pass(state, player, axis(input.moveX), axis(input.moveY));
   }
   if (!state.ball.ownerId) {
@@ -366,4 +396,5 @@ export function stepLocalGame(state: GameState, inputs:Record<string,InputState>
   state.timeRemaining = Math.max(0, state.timeRemaining - dt);
   state.elapsed += dt;
   if (state.timeRemaining <= 1e-9) { state.timeRemaining = 0; state.phase = 'finished'; }
+  if(state.phase!=='playing')cancelShotCharges(state);
 }

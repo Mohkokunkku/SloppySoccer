@@ -7,6 +7,7 @@ import type { Formation, GameState, Team } from './types.js';
 function attack(team: Team, formation: Formation = '2-1-1'): GameState {
   const state = createGame({ formations: { home: formation, away: formation } });
   state.controls = [];
+  state.tuning = {...DEFAULT_TUNING,fieldWidth:32,fieldHeight:20}; // Explicit canonical fixture; enlarged defaults are covered separately.
   state.controlledId = 'none';
   state.phase = 'playing';
   const sign = team === 'home' ? 1 : -1;

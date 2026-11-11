@@ -209,7 +209,7 @@ export function createFigure(player: Player, index: number): FigureRig {
     const brow = mesh(new THREE.BoxGeometry(0.082, 0.018, 0.018), hair, body, side * 0.11, 2.205, 0.275); brow.rotation.z = side * 0.08;
   }
   ellipsoid(body, skin, 0, 2.065, 0.302, 0.06, 0.07, 0.065);
-  const smile = mesh(new THREE.TorusGeometry(0.068, 0.011, 4, 12, Math.PI), black, body, 0, 2.005, 0.284); smile.rotation.z = Math.PI;
+  const smile = mesh(new THREE.TorusGeometry(0.068, 0.011, 4, 12, Math.PI), black, body, 0, 2.005, 0.284); smile.rotation.z = Math.PI;smile.name='mouth';
   // A raised chest badge and seam, like a tiny injection-moulded kit.
   mesh(rounded(0.12, 0.15, 0.022, 0.02), plastic(player.team==='home'?TEAMS.home.secondary:0xe4b548), body, -0.22, 1.49, 0.305);
   mesh(new THREE.BoxGeometry(0.025, 0.55, 0.014), kit, body, 0, 1.36, -0.283);
@@ -231,6 +231,7 @@ export function createFigure(player: Player, index: number): FigureRig {
 }
 
 export function poseFigure(rig: FigureRig, player: Player, elapsed: number, reducedMotion: boolean, cheer?:{style:number;seconds:number;index:number}): void {
+  setFigureExpression(rig,'neutral');
   rig.root.position.set(player.x, 0.1, player.y);
   rig.root.rotation.y = Math.PI / 2 - player.facing;
   const dt=Math.max(0,elapsed-(rig.poseTime??0));rig.poseTime=elapsed;
@@ -255,6 +256,19 @@ export function poseFigure(rig: FigureRig, player: Player, elapsed: number, redu
     rig.arms[0].rotation.x=rig.arms[1].rotation.x=0;
     rig.legs[0].rotation.x=pose.leftLeg;rig.legs[1].rotation.x=pose.rightLeg;
   }
+}
+
+/** Apply a simple readable expression to the raised facial features without replacing the mould. */
+export function setFigureExpression(rig:FigureRig,expression:'happy'|'frustrated'|'neutral'):void {
+  const body=rig.body;
+  const mouth=body.getObjectByName('mouth');
+  let party=body.getObjectByName('party-mouth') as THREE.Mesh|undefined;
+  if(expression!=='neutral'&&mouth&&!party){
+    party=new THREE.Mesh(new THREE.TorusGeometry(typeof rig.root.userData.characterId==='string'?0.045:0.068,0.011,4,12,Math.PI),black);
+    party.name='party-mouth';party.position.copy(mouth.position);party.position.z+=.018;body.add(party);
+  }
+  if(mouth)mouth.visible=expression==='neutral';
+  if(party){party.visible=expression!=='neutral';party.rotation.z=expression==='happy'?Math.PI:0;}
 }
 
 export function createFootball(): THREE.Group {

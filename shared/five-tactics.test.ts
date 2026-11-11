@@ -5,6 +5,7 @@ import { DEFAULT_TUNING } from './tuning.js';
 import type { Formation, GameState, Team } from './types.js';
 
 const setup = (formation: Formation): GameState => ({
+  tuning:{...DEFAULT_TUNING,fieldWidth:32,fieldHeight:20},
   formations:{home:formation,away:formation}, controls:[], controlledId:'none',
   players:(['home','away'] as Team[]).flatMap(team => [0,1,2,3,4].map(slot => ({
     id:`${team}-${slot}`,team,role:slot === 3 ? 'keeper' as const : 'outfield' as const,

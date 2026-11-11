@@ -6,10 +6,11 @@ import{kickoffPosition}from'./engine.js';
 it('leaves dressing-room doorways straight ahead and eases into the run',()=>{
  const s=createGame();startGame(s,true);stepGame(s,EMPTY_INPUT,1/60);
  for(const p of s.players){expect(p.x).toBe(p.team==='home'?-2:2);expect(Math.hypot(p.vx,p.vy)).toBeLessThan(7);expect(p.vy).toBeLessThan(0);}
- for(let i=0;i<60;i++){stepGame(s,EMPTY_INPUT,1/60);for(const p of s.players)if(p.y>10.5+1e-8)expect(p.x).toBe(p.team==='home'?-2:2);}
+ const exitY=getTuning(s).fieldHeight/2+.5;
+ for(let i=0;i<60;i++){stepGame(s,EMPTY_INPUT,1/60);for(const p of s.players)if(p.y>exitY+1e-8)expect(p.x).toBe(p.team==='home'?-2:2);}
 });
 it.each([0,20,60].flatMap(frame=>[12,30].map(height=>({frame,height}))))('keeps the original doorway route when height becomes $height at frame $frame',({frame,height})=>{
- const s=createGame();startGame(s,true);
+ const s=createGame();startGame(s,true);const anchorHeight=getTuning(s).fieldHeight,exitY=anchorHeight/2+.5;
  const held={...EMPTY_INPUT,shoot:true,pass:true,switchPlayer:true};
  const exited=new Set<string>();let frames=0;
  while(s.phase==='entering'&&frames<1000){
@@ -18,10 +19,10 @@ it.each([0,20,60].flatMap(frame=>[12,30].map(height=>({frame,height}))))('keeps 
   stepGame(s,held,1/60);frames++;
   s.players.forEach((p,i)=>{
    expect(Math.hypot(p.x-before[i]!.x,p.y-before[i]!.y)).toBeLessThanOrEqual(7/60+1e-9);
-   if(!exited.has(p.id)){expect(p.x).toBe(p.team==='home'?-2:2);if(p.y<=10.5+1e-9)exited.add(p.id);}
+   if(!exited.has(p.id)){expect(p.x).toBe(p.team==='home'?-2:2);if(p.y<=exitY+1e-9)exited.add(p.id);}
   });
   expect(s.elapsed).toBe(0);expect(s.timeRemaining).toBe(120);expect(s.score).toEqual({home:0,away:0});
-  if(s.phase==='entering'){expect(s.entrance?.fieldHeight).toBe(20);expect(s.entrance?.exitY).toBe(10.5);expect(new Set(s.entrance?.completed)).toEqual(exited);}
+  if(s.phase==='entering'){expect(s.entrance?.fieldHeight).toBe(anchorHeight);expect(s.entrance?.exitY).toBe(exitY);expect(new Set(s.entrance?.completed)).toEqual(exited);}
  }
  expect(exited.size).toBe(10);expect(s.phase).toBe('playing');expect(s.entrance).toBeUndefined();
  s.players.forEach(p=>{const target=kickoffPosition(p.team,Number(p.id.slice(-1)),'home',getTuning(s));expect(p.x).toBeCloseTo(target.x);expect(p.y).toBeCloseTo(target.y);});
