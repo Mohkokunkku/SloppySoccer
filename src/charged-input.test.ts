@@ -4,7 +4,7 @@ import { LocalInputHub } from './local-input';
 describe('charged input', () => {
   it('emits charge start on shoot down and a ratio release on key up', () => {
     let now = 100;
-    const hub = new LocalInputHub(() => [], () => now);
+    const hub = new LocalInputHub(() => [], () => now, () => 1.2);
     hub.setSeats([{ id: 'p1', team: 'home', device: 'keyboard1' }]);
     hub.keyDown('Space');
     expect(hub.poll().actionGroups.p1).toEqual([{ shoot: false, pass: false, switchPlayer: false, chargeStart: true }]);

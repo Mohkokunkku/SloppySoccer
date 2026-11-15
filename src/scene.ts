@@ -247,7 +247,8 @@ export function poseFigure(rig: FigureRig, player: Player, elapsed: number, redu
   const jointBlend=reducedMotion||cheer?0:rig.locomotion.blend;
   rig.knees?.forEach((joint,index)=>{joint.rotation.x=jointBlend*.12+(jointBlend?Math.max(0,index===0?wave:-wave)*1.05:0);});
   rig.elbows?.forEach(joint=>{joint.rotation.x=jointBlend?-jointBlend*.8:0;});
-  rig.arms.forEach((arm,index)=>{arm.rotation.z=(index===0?-1:1)*(player.role==='keeper'?0.94:0.26);});
+  rig.arms.forEach((arm,index)=>{arm.rotation.y=0;arm.rotation.z=(index===0?-1:1)*(player.role==='keeper'?0.94:0.26);});
+  rig.elbows?.forEach(joint=>{joint.rotation.y=0;joint.rotation.z=0;});
   if(cheer){
     const pose=celebrationPose(cheer.style,cheer.seconds,cheer.index,reducedMotion);
     rig.root.position.y+=pose.hop;rig.root.position.x+=pose.side;rig.root.position.z+=pose.forward;rig.root.rotation.y+=pose.yaw;

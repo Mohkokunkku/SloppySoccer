@@ -10,6 +10,7 @@ import {DANCE_NAMES,celebrationStyle} from './celebrations';
 import { createGame, startGame, skipIntro, cancelShotCharges } from '../shared/engine';
 import { KickMeters } from './kick-meters';
 import { renderControlGuide } from './controls-guide';
+import {controlHelpMarkup,mountControlHelp} from './control-help';
 import { PostMatchDirector, POST_MATCH_THEME_NAMES } from './post-match';
 import { stepQueuedGame } from './queued-game-step';
 import { DEFAULT_CONFIG, type MatchConfig, type MatchResult, type LocalSeat } from '../shared/types';
@@ -43,6 +44,7 @@ app.innerHTML = `
           <span class="clock"><span class="clock-caption" id="phase-label">Kick-off</span><time id="clock">2:00</time></span>
           <span class="team away"><strong id="away-score">0</strong> Argentina <span class="country-flag flag-ar" aria-hidden="true"></span></span>
         </div>
+        ${controlHelpMarkup()}
         <button class="quiet-button" id="pause" type="button" disabled>Pause</button>
         <button class="quiet-button" id="restart" type="button" disabled>Restart</button>
         <button class="quiet-button" id="change-players" type="button" disabled>Change players</button>
@@ -82,7 +84,7 @@ app.innerHTML = `
       <div class="control-strip">
         <p class="team-note" id="local-team-note">P1 Spain →</p>
         <p class="team-note" aria-live="polite">Selected: <span id="controlled-role">Attacker</span></p>
-        <details id="control-help" class="control-help" open><summary>Keyboard &amp; controller diagrams</summary><div class="keyboard-guide" id="local-control-guide" aria-label="Local player control diagrams"></div></details>
+
         <button class="quiet-button touch-toggle" id="touch-toggle" type="button" aria-pressed="false" aria-controls="touch-controls">Touch controls</button>
       </div>
       <p id="local-input-status" class="local-input-status" role="status"></p>
@@ -121,12 +123,13 @@ const pauseButton = element<HTMLButtonElement>('pause');
 const restartButton = element<HTMLButtonElement>('restart');
 const announcer = element('announcer');
 const phaseAnnouncement = new PhaseAnnouncement();
-const input = new LocalInputHub();
+const input = new LocalInputHub(undefined,undefined,()=>tuning.shotChargeTime);
 const inputQueue = new LocalInputQueue();
 const stepper = new FixedStepper();
 const saves = new SaveOnce();
 const audio = new GameAudio();
 const kickMeters = new KickMeters(element('kick-meter-host'));
+const controlHelp=mountControlHelp(app,()=>{if(!paused&&state.phase!=='ready')focusPitch();});
 let config: MatchConfig = { ...DEFAULT_CONFIG };
 let tuning = {...DEFAULT_TUNING};
 let localSeats:LocalSeat[]=[{id:'p1',team:'home',device:'keyboard1'}];
@@ -219,7 +222,7 @@ function beginMatch(): void {
   currentMatch = `match-${Date.now()}-${++matchNumber}`;
   finishedHandled = false;
   postMatch = null;
-  element<HTMLDetailsElement>('control-help').open=false;
+  controlHelp.close();
   paused = false;
   clearInput();
   audio.reset();void audio.unlock();
@@ -235,7 +238,7 @@ function setPaused(value: boolean, moveFocus = true): void {
   }
 }
 function resetSetup(): void {
-  element<HTMLDetailsElement>('control-help').open=true;
+  controlHelp.close();
   audio.quiet();postMatch=null;state = configuredGame(config); paused = false; finishedHandled = false;
   clearInput(); updateUI(); element('start').focus({ preventScroll: true });
 }
@@ -254,7 +257,7 @@ function updateUI(): void {
   const partyActive=state.phase==='finished'&&Boolean(postMatch?.view.active);
   element('party-hud').hidden=!partyActive||paused;
   const partyView=postMatch?.view;
-  setText(element('party-title'),partyView?.winner?`${partyView.winner==='home'?'Spain':'Argentina'} wins · ${POST_MATCH_THEME_NAMES[partyView.theme]}`:'Honours even · Thanks for playing');
+  setText(element('party-title'),partyView?.winner?`${partyView.winner==='home'?'Spain':'Argentina'} wins · ${partyView.segment==='handshake'?'Good game — handshakes':POST_MATCH_THEME_NAMES[partyView.theme]}`:'Honours even · Thanks for playing');
   const canvas=pitch.querySelector('canvas');
   const pitchLabel=`Sloppy Soccer tabletop pitch. ${guide}`;
   if(canvas&&canvas.getAttribute('aria-label')!==pitchLabel)canvas.setAttribute('aria-label',pitchLabel);
@@ -347,7 +350,7 @@ localSeats=localLobby.readSeats();input.setSeats(localSeats);
 const refreshDevices=()=>{localLobby?.refreshDevices();};
 window.addEventListener('gamepadconnected',refreshDevices);
 window.addEventListener('gamepaddisconnected',refreshDevices);
-element('sound-toggle').addEventListener('click',()=>{audio.setEnabled(!audio.enabled);updateUI();});
+element('sound-toggle').addEventListener('click',event=>{audio.setEnabled(!audio.enabled);updateUI();if(event.detail>0&&!paused&&state.phase!=='ready')focusPitch();});
 element('sound-test').addEventListener('click',()=>{audio.demo();updateUI();});
 element('sound-crowd').addEventListener('click',()=>{if(!audio.enabled)audio.setEnabled(true);audio.play('crowd-shot');updateUI();});
 element('sound-goal').addEventListener('click',()=>{if(!audio.enabled)audio.setEnabled(true);audio.play('goal');updateUI();});

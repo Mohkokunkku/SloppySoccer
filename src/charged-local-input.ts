@@ -1,19 +1,20 @@
 import type {InputState,LocalSeat} from '../shared/types';
 import {EMPTY_INPUT} from '../shared/types';
 import {normalizeSeats} from '../shared/local-controls';
+import {DEFAULT_TUNING} from '../shared/tuning';
 import type {ActionGroup} from './local-input-queue';
 type PadReader=()=>readonly(Gamepad|null)[];
 const layouts={keyboard1:['KeyA','KeyD','KeyW','KeyS','Space','KeyE','KeyQ','ShiftLeft'],keyboard2:['ArrowLeft','ArrowRight','ArrowUp','ArrowDown','Enter','Slash','Period','ShiftRight']};
 const group=(patch:Partial<ActionGroup>):ActionGroup=>({shoot:false,pass:false,switchPlayer:false,...patch});
-const ratio=(ms:number)=>Number.isFinite(ms)?Math.max(0,Math.min(1,ms/1200)):0;
+const ratio=(ms:number,duration:number)=>Number.isFinite(ms)?Math.max(0,Math.min(1,ms/duration)):0;
 export class LocalInputHub {
  private seats=normalizeSeats(undefined);
  private keys=new Set<string>();private edges=new Set<string>();
  private pointers=new Map<number,string>();private blockedKeys=new Set<string>();private blockedPointers=new Set<number>();
  private padHeld=new Map<number,Set<number>>();private blockedPadButtons=new Map<number,Set<number>>();
  private events:{seatId:string;group:ActionGroup}[]=[];
- private charges=new Map<string,{start:number;sources:Set<string>}>();
- constructor(private readonly readPads:PadReader=()=>typeof navigator==='undefined'||!navigator.getGamepads?[]:navigator.getGamepads(),private readonly now:()=>number=()=>performance.now()){}
+ private charges=new Map<string,{start:number;duration:number;sources:Set<string>}>();
+ constructor(private readonly readPads:PadReader=()=>typeof navigator==='undefined'||!navigator.getGamepads?[]:navigator.getGamepads(),private readonly now:()=>number=()=>performance.now(),private readonly readChargeTime:()=>number=()=>DEFAULT_TUNING.shotChargeTime){}
  setSeats(seats:LocalSeat[]):void{this.clear();this.seats=normalizeSeats(seats);}
  clear():void{
   this.events=[];this.charges.clear();
@@ -24,12 +25,12 @@ export class LocalInputHub {
  }
  private begin(seatId:string,source:string):void{
   let charge=this.charges.get(seatId);
-  if(!charge){charge={start:this.now(),sources:new Set()};this.charges.set(seatId,charge);this.events.push({seatId,group:group({chargeStart:true})});}
+  if(!charge){const seconds=this.readChargeTime();charge={start:this.now(),duration:(Number.isFinite(seconds)?Math.max(.2,Math.min(2,seconds)):DEFAULT_TUNING.shotChargeTime)*1000,sources:new Set()};this.charges.set(seatId,charge);this.events.push({seatId,group:group({chargeStart:true})});}
   charge.sources.add(source);
  }
  private end(seatId:string,source:string):void{
   const charge=this.charges.get(seatId);if(!charge?.sources.delete(source))return;
-  if(!charge.sources.size){this.events.push({seatId,group:group({shoot:true,shotCharge:ratio(this.now()-charge.start)})});this.charges.delete(seatId);}
+  if(!charge.sources.size){this.events.push({seatId,group:group({shoot:true,shotCharge:ratio(this.now()-charge.start,charge.duration)})});this.charges.delete(seatId);}
  }
  private observed(code:string,source:string,touch:boolean,down:boolean):void{
   const seats=touch?this.seats.slice(0,1):this.seats.filter(s=>s.device==='keyboard1'||s.device==='keyboard2');
@@ -83,7 +84,7 @@ export class LocalInputHub {
    input.shoot=groups.some(g=>g.shoot);input.pass=groups.some(g=>g.pass);input.switchPlayer=groups.some(g=>g.switchPlayer);
    if(groups.some(g=>g.chargeStart))input.chargeStart=true;
    const charge=this.charges.get(seat.id);
-   if(charge){input.shootHeld=true;input.shotCharge=ratio(this.now()-charge.start);}
+   if(charge){input.shootHeld=true;input.shotCharge=ratio(this.now()-charge.start,charge.duration);}
    else {const release=[...groups].reverse().find(g=>g.shoot&&g.shotCharge!==undefined);if(release){input.shootHeld=false;input.shotCharge=release.shotCharge;}}
    const length=Math.hypot(input.moveX,input.moveY);if(length>1){input.moveX/=length;input.moveY/=length;}
   }

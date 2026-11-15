@@ -5,11 +5,15 @@ import {advanceBallMotion,type BallMotion} from './ball-motion';
 import {kickoffPosition} from '../shared/engine';
 import {advanceLocomotion} from './locomotion';
 import {roleMarker} from './role-marker';
+import {roleChargeView} from './role-charge';
+import './role-charge.css';
 import {tacticalRoleOf} from '../shared/tactics';
 import {celebrationStyle} from './celebrations';
 import {humanControls} from '../shared/local-controls';
 import {introCamera} from './cinematic';
 import type {PostMatchView} from './post-match';
+import {POST_MATCH_HANDSHAKE_AT} from './post-match';
+import {handshakeLayout,poseHandshakePair} from './handshake';
 import {TEAMS} from './teams';
 import { buildTabletop, disposeTabletop, cameraBounds, COLORS, createFigure, createFootball, poseFigure, setFigureExpression, shadowTexture, type FigureRig } from './scene';
 const SEAT_COLORS=[0xffe183,0x7ce9ff,0xff91d5,0xaaff8c];
@@ -163,6 +167,10 @@ export class ToyRenderer {
       width=Math.min(bounds.width,24);height=width/aspect;
       const angle=view.elapsed*.18+view.theme*.6;
       this.camera.position.set(Math.sin(angle)*17,12,Math.cos(angle)*17);this.camera.lookAt(0,1,0);
+    }else if(!reduced&&view.segment==='handshake'){
+      const blend=THREE.MathUtils.smoothstep(view.elapsed-POST_MATCH_HANDSHAKE_AT,0,2),angle=POST_MATCH_HANDSHAKE_AT*.18+view.theme*.6;
+      width=THREE.MathUtils.lerp(Math.min(bounds.width,24),Math.min(bounds.width,22),blend);height=width/aspect;
+      this.camera.position.set(THREE.MathUtils.lerp(Math.sin(angle)*17,8,blend),THREE.MathUtils.lerp(12,18,blend),THREE.MathUtils.lerp(Math.cos(angle)*17,12,blend));this.camera.lookAt(0,THREE.MathUtils.lerp(1,1.3,blend),0);
     }else {this.camera.position.set(3,34,29);this.camera.lookAt(0,-.2,0);}
     this.camera.left=-width/2;this.camera.right=width/2;this.camera.top=height/2;this.camera.bottom=-height/2;this.camera.updateProjectionMatrix();this.camera.updateMatrixWorld();this.host.dataset.cameraMode=reduced?'wide':'post-match';
   }
@@ -193,6 +201,11 @@ export class ToyRenderer {
 
     }
     const party=Boolean(postMatch?.active&&state.phase==='finished');
+    const greeting=party&&postMatch!.segment==='handshake'&&postMatch!.winner!==null;
+    const greetingTime=greeting?postMatch!.elapsed-POST_MATCH_HANDSHAKE_AT:0;
+    const greetingBlend=this.reducedMotion.matches?1:THREE.MathUtils.smoothstep(greetingTime,0,2);
+    const pairs=greeting?handshakeLayout(state.players):[];
+    const greetingTargets=new Map(pairs.flatMap(pair=>[[pair.homeId,pair.home],[pair.awayId,pair.away]] as const));
     const staticScene=paused||state.phase==='ready'||(state.phase==='finished'&&!party);
     const staticKey=JSON.stringify([state.phase,paused,this.reducedMotion.matches,state.formations,state.controls,state.controlledId,state.players.map(p=>[p.id,p.team,p.role,p.tacticalRole]),postMatch?.active,postMatch?.id,postMatch?.theme,postMatch?.segment]);
     if(staticScene&&!this.needsFrame&&this.staticState===state&&this.staticKey===staticKey)return;
@@ -207,7 +220,7 @@ export class ToyRenderer {
       const rig=this.figures.get(player.id);
       const partyWinner=party&&postMatch!.winner===player.team;
       const partyLoser=party&&postMatch!.winner!==null&&postMatch!.winner!==player.team;
-      const cheer=partyWinner?{style:celebrationStyle(postMatch!.theme+1),seconds:postMatch!.elapsed,index:(index+postMatch!.theme)%5}:state.phase==='intro'?{style:celebrationStyle(1),seconds:6.5-state.phaseTimer,index:index%5}:state.phase==='goal'&&state.lastScorer===player.team?{style:celebrationStyle(state.score.home+state.score.away),seconds:5-state.phaseTimer,index:index%5}:undefined;
+      const cheer=greeting&&greetingBlend===1?undefined:partyWinner?{style:celebrationStyle(postMatch!.theme+1),seconds:postMatch!.elapsed,index:(index+postMatch!.theme)%5}:state.phase==='intro'?{style:celebrationStyle(1),seconds:6.5-state.phaseTimer,index:index%5}:state.phase==='goal'&&state.lastScorer===player.team?{style:celebrationStyle(state.score.home+state.score.away),seconds:5-state.phaseTimer,index:index%5}:undefined;
       let posed=player;
       if(party&&!this.reducedMotion.matches&&postMatch!.winner){
         const i=state.players.filter(p=>p.team===player.team).findIndex(p=>p.id===player.id),theme=postMatch!.theme;
@@ -216,9 +229,24 @@ export class ToyRenderer {
         const y=partyLoser?(i-2)*1.5:theme===1?Math.sin(angle)*2.4:theme===2?(i%3-1)*1.8:(i-2)*1.6;
         posed={...player,x,y,vx:0,vy:0,facing:player.team==='home'?0:Math.PI};
       }
-      if(rig&&!paused){poseFigure(rig,posed,this.motionTime,this.reducedMotion.matches,cheer);if(partyWinner)setFigureExpression(rig,'happy');else if(partyLoser){setFigureExpression(rig,'frustrated');if(!this.reducedMotion.matches){rig.body.rotation.x=-0.42;rig.body.rotation.z=0.08*Math.sin(this.motionTime*2);rig.arms[0].rotation.z=-0.08;rig.arms[1].rotation.z=0.08;}}}
+      const target=greetingTargets.get(player.id);
+      if(target)posed={...posed,x:THREE.MathUtils.lerp(posed.x,target.x,greetingBlend),y:THREE.MathUtils.lerp(posed.y,target.y,greetingBlend),vx:0,vy:0,facing:posed.facing+Math.atan2(Math.sin(target.facing-posed.facing),Math.cos(target.facing-posed.facing))*greetingBlend};
+      if(rig&&!paused){
+        poseFigure(rig,posed,this.motionTime,this.reducedMotion.matches,cheer);
+        if(partyWinner)setFigureExpression(rig,'happy');else if(partyLoser){setFigureExpression(rig,'frustrated');if(!this.reducedMotion.matches){rig.body.rotation.x=-0.42;rig.body.rotation.z=0.08*Math.sin(this.motionTime*2);rig.arms[0].rotation.z=-0.08;rig.arms[1].rotation.z=0.08;}}
+        if(target){
+          setFigureExpression(rig,'happy');rig.root.position.x=THREE.MathUtils.lerp(rig.root.position.x,posed.x,greetingBlend);rig.root.position.z=THREE.MathUtils.lerp(rig.root.position.z,posed.y,greetingBlend);rig.root.position.y=.1+(rig.root.position.y-.1)*(1-greetingBlend);
+          rig.root.rotation.y=THREE.MathUtils.lerp(rig.root.rotation.y,Math.PI/2-posed.facing,greetingBlend);rig.body.rotation.x*=1-greetingBlend;rig.body.rotation.z*=1-greetingBlend;rig.body.position.y*=1-greetingBlend;
+          for(const leg of rig.legs)leg.rotation.x*=1-greetingBlend;for(const knee of rig.knees??[])knee.rotation.x*=1-greetingBlend;
+        }
+      }
       positions[player.id]={x:rig?.root.position.x??player.x,z:rig?.root.position.z??player.y};
     });
+    if(greeting&&!paused){
+      const contacts=[];
+      if(greetingBlend===1)for(const pair of pairs){const home=this.figures.get(pair.homeId),away=this.figures.get(pair.awayId);if(home&&away){const hands=poseHandshakePair(home,away,greetingTime-2,this.reducedMotion.matches);contacts.push({homeId:pair.homeId,awayId:pair.awayId,handDistance:hands.homeHand.distanceTo(hands.awayHand),homeHand:hands.homeHand.toArray(),awayHand:hands.awayHand.toArray()});}}
+      this.host.dataset.handshakePairs=JSON.stringify(contacts);this.host.dataset.handshakeStep=greetingBlend<1?'approach':'shake';
+    }else if(!greeting){this.host.dataset.handshakePairs='[]';this.host.dataset.handshakeStep='';}
     if(party)this.updatePartyCamera(state,postMatch!,paused);else {this.updateCamera(state);Object.assign(this.host.dataset,{postMatchActive:'false',postMatchTheme:'',postMatchSegment:'',postMatchWinner:''});}
     state.players.forEach(player => {
       const rig = this.figures.get(player.id);
@@ -227,8 +255,11 @@ export class ToyRenderer {
         const label=roleMarker(player.role==='keeper'?'keeper':tacticalRoleOf(player)??undefined);if(marker.textContent!==label)marker.textContent=label;
         const seat=controls.find(c=>c.playerId===player.id);
         marker.dataset.seat=seat?.seatId??'';
-        marker.style.color=seat?`#${SEAT_COLORS[controls.indexOf(seat)%4].toString(16)}`:'';
-        marker.setAttribute('aria-label',`${TEAMS[player.team].name} ${label}${seat?' '+seat.seatId:''}`);
+        const charge=roleChargeView(state,player.id);
+        marker.dataset.charging=String(charge.charging);marker.dataset.chargePercent=charge.charging?String(charge.percent):'';
+        marker.style.background=charge.background;marker.style.borderColor=charge.charging?charge.color:'';
+        marker.style.color=charge.charging?'#132e3e':seat?`#${SEAT_COLORS[controls.indexOf(seat)%4].toString(16)}`:'';
+        marker.setAttribute('aria-label',`${TEAMS[player.team].name} ${label}${seat?' '+seat.seatId:''}${charge.charging?`, shot power ${charge.percent} percent, release to kick`:''}`);
         marker.dataset.role=label;marker.classList.toggle('is-controlled',Boolean(seat));
         marker.dataset.character=typeof rig?.root.userData.characterId==='string'?rig.root.userData.characterId:'';
         const markerHeight=typeof rig?.root.userData.markerHeight==='number'?rig.root.userData.markerHeight:2.95;
@@ -243,7 +274,7 @@ export class ToyRenderer {
             this.labels.append(badge);this.seatBadges.set(seat.seatId,badge);
           }
           badge.textContent=seat.seatId.toUpperCase();badge.dataset.seat=seat.seatId;badge.dataset.player=player.id;
-          badge.style.color=marker.style.color;badge.style.transform=marker.style.transform+' translateY(-26px)';
+          badge.style.color=`#${SEAT_COLORS[controls.indexOf(seat)%4].toString(16)}`;badge.style.transform=marker.style.transform+' translateY(-26px)';
           badge.setAttribute('aria-label',`${TEAMS[player.team].name} ${seat.seatId} controlled player ${label}`);
         }
       }

@@ -6,10 +6,11 @@ export type PostMatchView = {
   winner: 'home' | 'away' | null;
   theme: 0 | 1 | 2;
   elapsed: number;
-  segment: 'winners' | 'losers' | 'finale' | 'draw' | 'done';
+  segment: 'winners' | 'losers' | 'finale' | 'handshake' | 'draw' | 'done';
 };
 
-export const POST_MATCH_DURATION = 16;
+export const POST_MATCH_DURATION = 22;
+export const POST_MATCH_HANDSHAKE_AT = 16;
 export const POST_MATCH_THEME_NAMES = ['Golden Boot', 'The Grandstand', 'After the Whistle'] as const;
 
 export class PostMatchDirector {
@@ -34,7 +35,8 @@ export class PostMatchDirector {
     else if (this.winner === null) segment = 'draw';
     else if (this.elapsed < 6) segment = 'winners';
     else if (this.elapsed < 9) segment = 'losers';
-    else segment = 'finale';
+    else if(this.elapsed < POST_MATCH_HANDSHAKE_AT) segment = 'finale';
+    else segment = 'handshake';
     return { id: this.id, active: !done, winner: this.winner, theme: this.theme, elapsed: this.elapsed, segment };
   }
 
