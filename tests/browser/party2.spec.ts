@@ -56,9 +56,9 @@ for(const [theme,name]of ['Golden Boot','The Grandstand','After the Whistle'].en
 });
 
 test('draw and reduced motion are neutral, finish naturally and decode all supplied clips',async({page})=>{
- test.setTimeout(30000);await page.emulateMedia({reducedMotion:'reduce'});await page.goto('/victory.html');await page.locator('#victory-result').selectOption('draw');
+ test.setTimeout(45000);await page.emulateMedia({reducedMotion:'reduce'});await page.goto('/victory.html');await page.locator('#victory-result').selectOption('draw');
  const pitch=page.locator('#victory-pitch');await expect(pitch).toHaveAttribute('data-post-match-segment','draw');await expect(pitch).toHaveAttribute('data-post-match-winner','draw');await expect(pitch).toHaveAttribute('data-camera-mode','wide');
- await expect(pitch).toHaveAttribute('data-post-match-active','false',{timeout:12000});
+ await expect(pitch).toHaveAttribute('data-post-match-active','false',{timeout:35000});
  const decoded=await page.evaluate(async()=>{const c=new AudioContext();try{return await Promise.all(['theme-0','theme-1','theme-2','cheer-yeah','cheer-we-did-it','cheer-champions'].map(async name=>{const r=await fetch('/audio-v3/'+name+'.wav');if(!r.ok)throw Error(name);const b=await c.decodeAudioData(await r.arrayBuffer());return {name,duration:b.duration};}));}finally{await c.close();}});
  expect(decoded).toHaveLength(6);for(const clip of decoded)expect(clip.duration).toBeGreaterThan(.2);
  await page.setViewportSize({width:390,height:844});expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);

@@ -1,6 +1,8 @@
 import type {GameState} from '../shared/types';
 import {AudioEvents,type SoundEvent} from './audio-events';
 import type {PostMatchView} from './post-match';
+import {HUMAN_SHOUTS} from './human-shouts';
+const SHOUT_PATHS=new Map(HUMAN_SHOUTS.map(clip=>[clip.id,clip.path]));
 const MIX={kick:[['kick',.55]],'pass-me':[['voice-go',.6]],here:[['voice-yes',.6]],'crowd-shot':[['crowd-shot',.38]],goal:[['crowd-goal',.65],['goal-music',.42]]} as const;
 /** Gesture-unlocked, opt-in sample playback. No synthetic speech or oscillator fallback. */
 export class GameAudio {
@@ -40,7 +42,7 @@ export class GameAudio {
    await this.unlock();const ctx=this.context;
    if(!ctx||!this.enabled||generation!==this.generation||ctx.state!=='running'||(partyGeneration&&partyGeneration!==this.partyGeneration))return;
    let buffer=this.buffers.get(name);
-   if(!buffer){const directory=name.startsWith('theme-')||name.startsWith('cheer-')?'audio-v3':'audio-v2';buffer=fetch(`/${directory}/${name}.wav`).then(async response=>{if(!response.ok)throw new Error('Missing sample');return ctx.decodeAudioData(await response.arrayBuffer());});this.buffers.set(name,buffer);void buffer.catch(()=>{if(this.buffers.get(name)===buffer)this.buffers.delete(name);});}
+   if(!buffer){const path=SHOUT_PATHS.get(name)??`/${name.startsWith('theme-')?'audio-v3':'audio-v2'}/${name}.wav`;buffer=fetch(path).then(async response=>{if(!response.ok)throw new Error('Missing sample');return ctx.decodeAudioData(await response.arrayBuffer());});this.buffers.set(name,buffer);void buffer.catch(()=>{if(this.buffers.get(name)===buffer)this.buffers.delete(name);});}
    const decoded=await buffer;
    if(!this.enabled||generation!==this.generation||ctx.state!=='running'||(partyGeneration&&partyGeneration!==this.partyGeneration))return;
    while(this.active.size>=6){const oldest=this.active.keys().next().value;if(oldest)this.stop(oldest);}

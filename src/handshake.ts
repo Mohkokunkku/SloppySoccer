@@ -33,11 +33,22 @@ function solve(parts:ArmParts,target:THREE.Vector3):THREE.Vector3{
  rig.root.updateMatrixWorld(true);return hand.getWorldPosition(new THREE.Vector3());
 }
 /** Both real right hands share a target and gentle pump; moulds are never stretched. */
-export function poseHandshakePair(home:FigureRig,away:FigureRig,seconds:number,reducedMotion=false):{homeHand:THREE.Vector3;awayHand:THREE.Vector3}{
+export function poseHandshakePair(home:FigureRig,away:FigureRig,seconds:number,reducedMotion=false,strength=1):{homeHand:THREE.Vector3;awayHand:THREE.Vector3}{
+ const original=[home,away].map(r=>({arm:r.arms[1].quaternion.clone(),elbow:r.elbows?.[1]?.quaternion.clone()}));
  const h=armParts(home),a=armParts(away);
  if(!h||!a)return {homeHand:home.root.position.clone(),awayHand:away.root.position.clone()};
+ const blend=THREE.MathUtils.clamp(Number.isFinite(strength)?strength:0,0,1);
+
+ home.root.updateMatrixWorld(true);away.root.updateMatrixWorld(true);
  const homeReach=h.upper.length()+h.lower.length(),awayReach=a.upper.length()+a.lower.length();
  const point=h.shoulder.clone().lerp(a.shoulder,homeReach/(homeReach+awayReach));
  point.y+=reducedMotion?0:.025*Math.sin((Number.isFinite(seconds)?seconds:0)*Math.PI*2);
- return {homeHand:solve(h,point),awayHand:solve(a,point)};
+ solve(h,point);solve(a,point);
+ const goals=[h,a].map(p=>({arm:p.arm.quaternion.clone(),elbow:p.elbow.quaternion.clone()}));
+ for(const [index,parts] of [h,a].entries()){
+  parts.arm.quaternion.copy(original[index].arm).slerp(goals[index].arm,blend);
+  parts.elbow.quaternion.copy(original[index].elbow!).slerp(goals[index].elbow,blend);
+ }
+ home.root.updateMatrixWorld(true);away.root.updateMatrixWorld(true);
+ return {homeHand:h.hand.getWorldPosition(new THREE.Vector3()),awayHand:a.hand.getWorldPosition(new THREE.Vector3())};
 }

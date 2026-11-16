@@ -22,6 +22,6 @@ it('uses three distinct themes, winner-only cheers, and quiet/reenable lifecycle
  expect(m.fetcher.mock.calls.map(c=>c[0])).toEqual(expect.arrayContaining(['/audio-v3/theme-0.wav','/audio-v3/theme-1.wav','/audio-v3/theme-2.wav']));
  const cheersBefore=m.fetcher.mock.calls.filter(c=>String(c[0]).includes('cheer')).length;
  a.updatePostMatch(view('draw',true,0,'draw',null));await flush();expect(m.fetcher.mock.calls.filter(c=>String(c[0]).includes('cheer'))).toHaveLength(cheersBefore);
- a.updatePostMatch(view('winner',true,1));await flush();expect(m.fetcher).toHaveBeenCalledWith('/audio-v3/cheer-yeah.wav');
+ a.updatePostMatch(view('winner',true,1));await flush();expect(m.fetcher).toHaveBeenCalledWith('/audio-v3/cheer-yeah.wav?v=human-v1');
  a.quiet();a.updatePostMatch(view('resume',true,2));await flush();expect(a.activeCount).toBe(2);
 });

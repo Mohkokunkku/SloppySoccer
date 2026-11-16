@@ -12,8 +12,9 @@ import {celebrationStyle} from './celebrations';
 import {humanControls} from '../shared/local-controls';
 import {introCamera} from './cinematic';
 import type {PostMatchView} from './post-match';
-import {POST_MATCH_HANDSHAKE_AT} from './post-match';
-import {handshakeLayout,poseHandshakePair} from './handshake';
+import {handshakeStart} from './post-match';
+import {poseHandshakePair} from './handshake';
+import {fairPlayFrame} from './fair-play';
 import {TEAMS} from './teams';
 import { buildTabletop, disposeTabletop, cameraBounds, COLORS, createFigure, createFootball, poseFigure, setFigureExpression, shadowTexture, type FigureRig } from './scene';
 const SEAT_COLORS=[0xffe183,0x7ce9ff,0xff91d5,0xaaff8c];
@@ -48,6 +49,8 @@ export class ToyRenderer {
   private markers=new Map<string,HTMLSpanElement>();
   private seatBadges=new Map<string,HTMLSpanElement>();
   private projected=new THREE.Vector3();
+  private greetingId='';
+  private greetedPairs=new Map<string,{homeId:string;awayId:string}>();
 
   constructor(private host: HTMLElement, state: GameState) {
     this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false, powerPreference: 'high-performance' });
@@ -168,9 +171,14 @@ export class ToyRenderer {
       const angle=view.elapsed*.18+view.theme*.6;
       this.camera.position.set(Math.sin(angle)*17,12,Math.cos(angle)*17);this.camera.lookAt(0,1,0);
     }else if(!reduced&&view.segment==='handshake'){
-      const blend=THREE.MathUtils.smoothstep(view.elapsed-POST_MATCH_HANDSHAKE_AT,0,2),angle=POST_MATCH_HANDSHAKE_AT*.18+view.theme*.6;
-      width=THREE.MathUtils.lerp(Math.min(bounds.width,24),Math.min(bounds.width,22),blend);height=width/aspect;
-      this.camera.position.set(THREE.MathUtils.lerp(Math.sin(angle)*17,8,blend),THREE.MathUtils.lerp(12,18,blend),THREE.MathUtils.lerp(Math.cos(angle)*17,12,blend));this.camera.lookAt(0,THREE.MathUtils.lerp(1,1.3,blend),0);
+      const start=handshakeStart(view),blend=THREE.MathUtils.smoothstep(view.elapsed-start,0,2),angle=start*.18+view.theme*.6;
+      this.camera.position.set(THREE.MathUtils.lerp(view.winner===null?3:Math.sin(angle)*17,16,blend),THREE.MathUtils.lerp(view.winner===null?34:12,22,blend),THREE.MathUtils.lerp(view.winner===null?29:Math.cos(angle)*17,7,blend));this.camera.lookAt(0,THREE.MathUtils.lerp(1,1.4,blend),0);this.camera.updateMatrixWorld(true);
+      let extentX=0,extentY=0;
+      for(const rig of this.figures.values()){
+        const box=new THREE.Box3().setFromObject(rig.root);
+        for(const x of [box.min.x,box.max.x])for(const y of [box.min.y,box.max.y+.4])for(const z of [box.min.z,box.max.z]){const point=new THREE.Vector3(x,y,z).applyMatrix4(this.camera.matrixWorldInverse);extentX=Math.max(extentX,Math.abs(point.x));extentY=Math.max(extentY,Math.abs(point.y));}
+      }
+      height=Math.max(7,extentY*2+1.6,(extentX*2+1.6)/aspect);width=height*aspect;
     }else {this.camera.position.set(3,34,29);this.camera.lookAt(0,-.2,0);}
     this.camera.left=-width/2;this.camera.right=width/2;this.camera.top=height/2;this.camera.bottom=-height/2;this.camera.updateProjectionMatrix();this.camera.updateMatrixWorld();this.host.dataset.cameraMode=reduced?'wide':'post-match';
   }
@@ -201,11 +209,14 @@ export class ToyRenderer {
 
     }
     const party=Boolean(postMatch?.active&&state.phase==='finished');
-    const greeting=party&&postMatch!.segment==='handshake'&&postMatch!.winner!==null;
-    const greetingTime=greeting?postMatch!.elapsed-POST_MATCH_HANDSHAKE_AT:0;
+    const greeting=party&&postMatch!.segment==='handshake';
+    const greetingTime=greeting?postMatch!.elapsed-handshakeStart(postMatch!):0;
     const greetingBlend=this.reducedMotion.matches?1:THREE.MathUtils.smoothstep(greetingTime,0,2);
-    const pairs=greeting?handshakeLayout(state.players):[];
-    const greetingTargets=new Map(pairs.flatMap(pair=>[[pair.homeId,pair.home],[pair.awayId,pair.away]] as const));
+    const fair=greeting?fairPlayFrame(state.players,greetingTime,this.reducedMotion.matches):null;
+    const pairs=fair?.pairs??[];
+    const greetingTargets=new Map(Object.entries(fair?.positions??{}));
+    const grips=new Map(pairs.flatMap(pair=>[[pair.homeId,pair.strength],[pair.awayId,pair.strength]] as const));
+    this.greetedPairs??=new Map();if(this.greetingId!==(postMatch?.id??'')){this.greetingId=postMatch?.id??'';this.greetedPairs.clear();}
     const staticScene=paused||state.phase==='ready'||(state.phase==='finished'&&!party);
     const staticKey=JSON.stringify([state.phase,paused,this.reducedMotion.matches,state.formations,state.controls,state.controlledId,state.players.map(p=>[p.id,p.team,p.role,p.tacticalRole]),postMatch?.active,postMatch?.id,postMatch?.theme,postMatch?.segment]);
     if(staticScene&&!this.needsFrame&&this.staticState===state&&this.staticKey===staticKey)return;
@@ -233,20 +244,23 @@ export class ToyRenderer {
       if(target)posed={...posed,x:THREE.MathUtils.lerp(posed.x,target.x,greetingBlend),y:THREE.MathUtils.lerp(posed.y,target.y,greetingBlend),vx:0,vy:0,facing:posed.facing+Math.atan2(Math.sin(target.facing-posed.facing),Math.cos(target.facing-posed.facing))*greetingBlend};
       if(rig&&!paused){
         poseFigure(rig,posed,this.motionTime,this.reducedMotion.matches,cheer);
-        if(partyWinner)setFigureExpression(rig,'happy');else if(partyLoser){setFigureExpression(rig,'frustrated');if(!this.reducedMotion.matches){rig.body.rotation.x=-0.42;rig.body.rotation.z=0.08*Math.sin(this.motionTime*2);rig.arms[0].rotation.z=-0.08;rig.arms[1].rotation.z=0.08;}}
+        if(partyWinner||greeting)setFigureExpression(rig,'happy');else if(partyLoser){setFigureExpression(rig,'frustrated');if(!this.reducedMotion.matches){rig.body.rotation.x=-0.42;rig.body.rotation.z=0.08*Math.sin(this.motionTime*2);rig.arms[0].rotation.z=-0.08;rig.arms[1].rotation.z=0.08;}}
         if(target){
           setFigureExpression(rig,'happy');rig.root.position.x=THREE.MathUtils.lerp(rig.root.position.x,posed.x,greetingBlend);rig.root.position.z=THREE.MathUtils.lerp(rig.root.position.z,posed.y,greetingBlend);rig.root.position.y=.1+(rig.root.position.y-.1)*(1-greetingBlend);
-          rig.root.rotation.y=THREE.MathUtils.lerp(rig.root.rotation.y,Math.PI/2-posed.facing,greetingBlend);rig.body.rotation.x*=1-greetingBlend;rig.body.rotation.z*=1-greetingBlend;rig.body.position.y*=1-greetingBlend;
-          for(const leg of rig.legs)leg.rotation.x*=1-greetingBlend;for(const knee of rig.knees??[])knee.rotation.x*=1-greetingBlend;
+          const grip=grips.get(player.id)??0,settle=cheer?greetingBlend:grip;
+          if(!cheer){for(const leg of rig.legs)leg.rotation.x*=.5;for(const knee of rig.knees??[])knee.rotation.x*=.5;rig.arms.forEach((arm,i)=>{arm.rotation.x*=.5;arm.rotation.z=(i?1:-1)*.16;});rig.body.position.y*=.4;}
+          rig.root.rotation.y=THREE.MathUtils.lerp(rig.root.rotation.y,Math.PI/2-posed.facing,greetingBlend);rig.body.rotation.x*=1-settle;rig.body.rotation.z*=1-settle;rig.body.position.y*=1-settle;
+          for(const leg of rig.legs)leg.rotation.x*=1-settle;for(const knee of rig.knees??[])knee.rotation.x*=1-settle;
         }
       }
       positions[player.id]={x:rig?.root.position.x??player.x,z:rig?.root.position.z??player.y};
     });
     if(greeting&&!paused){
       const contacts=[];
-      if(greetingBlend===1)for(const pair of pairs){const home=this.figures.get(pair.homeId),away=this.figures.get(pair.awayId);if(home&&away){const hands=poseHandshakePair(home,away,greetingTime-2,this.reducedMotion.matches);contacts.push({homeId:pair.homeId,awayId:pair.awayId,handDistance:hands.homeHand.distanceTo(hands.awayHand),homeHand:hands.homeHand.toArray(),awayHand:hands.awayHand.toArray()});}}
-      this.host.dataset.handshakePairs=JSON.stringify(contacts);this.host.dataset.handshakeStep=greetingBlend<1?'approach':'shake';
+      if(greetingBlend===1)for(const pair of pairs){const home=this.figures.get(pair.homeId),away=this.figures.get(pair.awayId);if(home&&away){const hands=poseHandshakePair(home,away,pair.seconds,this.reducedMotion.matches,pair.strength),distance=hands.homeHand.distanceTo(hands.awayHand);if(pair.strength>=.98){contacts.push({homeId:pair.homeId,awayId:pair.awayId,handDistance:distance,homeHand:hands.homeHand.toArray(),awayHand:hands.awayHand.toArray()});if(distance<=.12)this.greetedPairs.set(pair.homeId+':'+pair.awayId,{homeId:pair.homeId,awayId:pair.awayId});}}}
+      this.host.dataset.handshakePairs=JSON.stringify(contacts);this.host.dataset.handshakeStep=greetingBlend<1?'approach':contacts.length?'shake':fair!.stage==='departing'?'departing':'walking';this.host.dataset.fairPlayRound=String(fair!.round);
     }else if(!greeting){this.host.dataset.handshakePairs='[]';this.host.dataset.handshakeStep='';}
+    this.host.dataset.fairPlayCompletedPairs=JSON.stringify([...this.greetedPairs.values()]);
     if(party)this.updatePartyCamera(state,postMatch!,paused);else {this.updateCamera(state);Object.assign(this.host.dataset,{postMatchActive:'false',postMatchTheme:'',postMatchSegment:'',postMatchWinner:''});}
     state.players.forEach(player => {
       const rig = this.figures.get(player.id);

@@ -1,4 +1,5 @@
 import type { GameState } from '../shared/types';
+import {FAIR_PLAY_DURATION} from './fair-play';
 
 export type PostMatchView = {
   id: string;
@@ -9,8 +10,11 @@ export type PostMatchView = {
   segment: 'winners' | 'losers' | 'finale' | 'handshake' | 'draw' | 'done';
 };
 
-export const POST_MATCH_DURATION = 22;
 export const POST_MATCH_HANDSHAKE_AT = 16;
+export const POST_MATCH_DURATION = POST_MATCH_HANDSHAKE_AT+FAIR_PLAY_DURATION;
+export const POST_MATCH_DRAW_HANDSHAKE_AT = 8;
+export const POST_MATCH_DRAW_DURATION = POST_MATCH_DRAW_HANDSHAKE_AT+FAIR_PLAY_DURATION;
+export const handshakeStart=(view:Pick<PostMatchView,'winner'>)=>view.winner===null?POST_MATCH_DRAW_HANDSHAKE_AT:POST_MATCH_HANDSHAKE_AT;
 export const POST_MATCH_THEME_NAMES = ['Golden Boot', 'The Grandstand', 'After the Whistle'] as const;
 
 export class PostMatchDirector {
@@ -29,9 +33,10 @@ export class PostMatchDirector {
   }
 
   get view(): PostMatchView {
-    const done = this.finished || (this.winner === null ? this.elapsed >= 8 : this.elapsed >= POST_MATCH_DURATION);
+    const done = this.finished || this.elapsed >= (this.winner === null?POST_MATCH_DRAW_DURATION:POST_MATCH_DURATION);
     let segment: PostMatchView['segment'];
     if (done) segment = 'done';
+    else if (this.elapsed>=handshakeStart({winner:this.winner})) segment = 'handshake';
     else if (this.winner === null) segment = 'draw';
     else if (this.elapsed < 6) segment = 'winners';
     else if (this.elapsed < 9) segment = 'losers';
@@ -42,9 +47,9 @@ export class PostMatchDirector {
 
   update(dt: number, paused = false): PostMatchView {
     if (this.view.segment === 'done') { this.finished = true; return this.view; }
-    if (!paused && Number.isFinite(dt) && dt > 0) this.elapsed = Math.min(this.elapsed + Math.min(dt, 0.25), this.winner === null ? 8 : POST_MATCH_DURATION);
-    if (this.winner === null && this.elapsed >= 8) this.finished = true;
-    else if (this.elapsed >= POST_MATCH_DURATION) this.finished = true;
+    const duration=this.winner===null?POST_MATCH_DRAW_DURATION:POST_MATCH_DURATION;
+    if (!paused && Number.isFinite(dt) && dt > 0) this.elapsed = Math.min(this.elapsed + Math.min(dt, 0.25),duration);
+    if(this.elapsed>=duration)this.finished=true;
     return this.view;
   }
 

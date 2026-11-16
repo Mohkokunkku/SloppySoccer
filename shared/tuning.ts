@@ -1,11 +1,11 @@
 import {FIELD,type GameState,type GameTuning} from './types.js';
-export const DEFAULT_TUNING: Readonly<GameTuning> = Object.freeze({fieldWidth:35.2,fieldHeight:22,goalWidth:7,goalHeight:2.8,runSpeed:5.6,sprintMultiplier:1.15,shotChargeTime:.6,kickPower:22,passPower:15,keeperPower:13.8,acceleration:24,turnRate:7});
+export const DEFAULT_TUNING: Readonly<GameTuning> = Object.freeze({fieldWidth:35.2,fieldHeight:22,goalWidth:7,goalHeight:2.8,runSpeed:5.6,sprintMultiplier:1.15,shotChargeTime:.6,kickPower:22,passPower:17.25,keeperPower:13.8,acceleration:24,turnRate:7});
 export const TUNING_LIMITS: Record<keyof GameTuning,{min:number;max:number;step:number;label:string;unit:string}> = {
  fieldWidth:{min:20,max:48,step:.1,label:'Field length',unit:'m'},fieldHeight:{min:12,max:30,step:.1,label:'Field width',unit:'m'},
  goalWidth:{min:3,max:10,step:.25,label:'Goal width',unit:'m'},goalHeight:{min:1.5,max:4,step:.1,label:'Goal height',unit:'m'},
  runSpeed:{min:3,max:9,step:.1,label:'Running speed',unit:'m/s'},sprintMultiplier:{min:1,max:2,step:.05,label:'Sprint multiplier',unit:'×'},
  shotChargeTime:{min:.2,max:2,step:.05,label:'Shot charge time',unit:'s'},
- kickPower:{min:12,max:36,step:.5,label:'Shot power',unit:'m/s'},passPower:{min:6,max:24,step:.5,label:'Pass power',unit:'m/s'},keeperPower:{min:8,max:20,step:.5,label:'Keeper clearance',unit:'m/s'},
+ kickPower:{min:12,max:36,step:.5,label:'Shot power',unit:'m/s'},passPower:{min:6,max:24,step:.25,label:'Pass power',unit:'m/s'},keeperPower:{min:8,max:20,step:.5,label:'Keeper clearance',unit:'m/s'},
  acceleration:{min:8,max:50,step:1,label:'Acceleration',unit:'m/s²'},turnRate:{min:2,max:16,step:.25,label:'Turning response',unit:'rad/s'},
 };
 export function sanitizeTuning(value:unknown,base:Readonly<GameTuning>=DEFAULT_TUNING):GameTuning{

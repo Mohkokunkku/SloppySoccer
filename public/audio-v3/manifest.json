@@ -1,0 +1,65 @@
+{
+  "assets": [
+    {
+      "file": "cheer-champions.wav",
+      "bytes": 45178,
+      "duration": 0.939583,
+      "channels": 1,
+      "sampleRate": 24000,
+      "rms": 0.126706,
+      "peak": 0.935913,
+      "sha256": "873562b7315fb5b844f376d895b0e5b1b177ff1ebf4ab6d016f691aeacd91c38"
+    },
+    {
+      "file": "cheer-we-did-it.wav",
+      "bytes": 62310,
+      "duration": 1.2965,
+      "channels": 1,
+      "sampleRate": 24000,
+      "rms": 0.113756,
+      "peak": 0.830353,
+      "sha256": "c666dc8d206e3dfe0a127af84c0919abb20d51d32d82aa61073c324213cf2820"
+    },
+    {
+      "file": "cheer-yeah.wav",
+      "bytes": 48450,
+      "duration": 1.00775,
+      "channels": 1,
+      "sampleRate": 24000,
+      "rms": 0.186748,
+      "peak": 0.912781,
+      "sha256": "4e168fcf1dcae79cac3d5c8b01cf1304eeb70dc61d246ac165b3e3efc6fc1909"
+    },
+    {
+      "file": "theme-0.wav",
+      "bytes": 352844,
+      "duration": 8.0,
+      "channels": 1,
+      "sampleRate": 22050,
+      "rms": 0.243299,
+      "peak": 0.708374,
+      "sha256": "ff8d891a895e3b67f87e279763f98aa1a74a5121fbb395f6a907f7cf8437a309"
+    },
+    {
+      "file": "theme-1.wav",
+      "bytes": 352844,
+      "duration": 8.0,
+      "channels": 1,
+      "sampleRate": 22050,
+      "rms": 0.236299,
+      "peak": 0.708099,
+      "sha256": "eaa8695bdffa58a5ac32998fabda1a85faaab11e36944531544637539c22cf00"
+    },
+    {
+      "file": "theme-2.wav",
+      "bytes": 352844,
+      "duration": 8.0,
+      "channels": 1,
+      "sampleRate": 22050,
+      "rms": 0.249965,
+      "peak": 0.708374,
+      "sha256": "989a30d373275a36399dcb4d401035518ac008f2289b116c4b80723585613413"
+    }
+  ],
+  "credits": "CREDITS.md"
+}

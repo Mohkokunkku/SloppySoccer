@@ -35,5 +35,5 @@ it('quiet invalidates pending browser resume and permits fresh playback afterwar
  vi.stubGlobal('AudioContext',class{constructor(){return ctx;}});
  const a=new GameAudio();a.setEnabled(true);a.play('kick');a.quiet();resume();await flush();expect(m.sources).toHaveLength(0);
  a.play('pass-me');a.play('here');a.play('crowd-shot');await flush();
- expect(m.fetcher.mock.calls.map(v=>v[0])).toEqual(expect.arrayContaining(['/audio-v2/voice-go.wav','/audio-v2/voice-yes.wav','/audio-v2/crowd-shot.wav']));expect(a.played).toBe(3);
+ expect(m.fetcher.mock.calls.map(v=>v[0])).toEqual(expect.arrayContaining(['/audio-v2/voice-go.wav?v=human-v1','/audio-v2/voice-yes.wav?v=human-v1','/audio-v2/crowd-shot.wav']));expect(a.played).toBe(3);
 });

@@ -48,25 +48,40 @@ it.each(['home','away'] as const)('joins real opposing right hands after the dan
  const {state,renderer,host,figures}=fixture(),before=JSON.stringify(state);
  renderer.render(state,100,false,view({winner,elapsed:15.99,segment:'finale'}));const previous=figures.get('home-0')!.root.position.clone();
  renderer.render(state,150,false,view({winner,elapsed:16,segment:'handshake'}));expect(figures.get('home-0')!.root.position.distanceTo(previous)).toBeLessThan(.3);
- renderer.render(state,200,false,view({winner,elapsed:18.5,segment:'handshake'}));
+ renderer.render(state,200,false,view({winner,elapsed:25.2,segment:'handshake'}));
  const pairs=JSON.parse(host.dataset.handshakePairs||'[]');expect(pairs).toHaveLength(5);for(const pair of pairs){expect(pair.homeId).toMatch(/^home-/);expect(pair.awayId).toMatch(/^away-/);expect(pair.handDistance).toBeLessThanOrEqual(.12);}
  const arm=figures.get('home-0')!.arms[1].quaternion.clone(),camera=renderer.camera.position.clone(),positions=host.dataset.playerPositions;
- renderer.render(state,250,true,view({winner,elapsed:19.5,segment:'handshake'}));expect(figures.get('home-0')!.arms[1].quaternion.equals(arm)).toBe(true);expect(renderer.camera.position.equals(camera)).toBe(true);expect(host.dataset.playerPositions).toBe(positions);expect(JSON.stringify(state)).toBe(before);
- renderer.render(state,300,false,view({winner,elapsed:22,segment:'done',active:false}));expect(host.dataset.handshakePairs).toBe('[]');
+ renderer.render(state,250,true,view({winner,elapsed:25.4,segment:'handshake'}));expect(figures.get('home-0')!.arms[1].quaternion.equals(arm)).toBe(true);expect(renderer.camera.position.equals(camera)).toBe(true);expect(host.dataset.playerPositions).toBe(positions);expect(JSON.stringify(state)).toBe(before);
+ renderer.render(state,300,false,view({winner,elapsed:34,segment:'done',active:false}));expect(host.dataset.handshakePairs).toBe('[]');
 });
-it('keeps every handshake mould inside a wide rehearsal viewport',()=>{
+it.each([18.8,25.2,32,33.9])('keeps every moving fair-play mould inside a wide rehearsal viewport at %s',elapsed=>{
  const {state,renderer,figures,host}=fixture();host.clientWidth=1352;host.clientHeight=640;
- renderer.render(state,100,false,view({elapsed:18.5,segment:'handshake'}));
+ renderer.render(state,100,false,view({elapsed,segment:'handshake'}));
  for(const rig of figures.values()){
   rig.root.updateMatrixWorld(true);const box=new THREE.Box3().setFromObject(rig.root);
   for(const x of [box.min.x,box.max.x])for(const y of [box.min.y,box.max.y])for(const z of [box.min.z,box.max.z]){const p=new THREE.Vector3(x,y,z).project(renderer.camera);expect(Math.abs(p.x)).toBeLessThan(.98);expect(Math.abs(p.y)).toBeLessThan(.98);}
  }
 });
-it('uses a static wide handshake for reduced motion',()=>{
+it('uses static per-encounter poses and a wide camera for reduced motion',()=>{
  const {state,renderer,host,figures}=fixture();renderer.reducedMotion.matches=true;
  renderer.render(state,100,false,view({elapsed:18.5,segment:'handshake'}));const hand=figures.get('home-0')!.arms[1].quaternion.clone();
- expect(JSON.parse(host.dataset.handshakePairs||'[]')).toHaveLength(5);expect(host.dataset.cameraMode).toBe('wide');
- renderer.render(state,200,false,view({elapsed:20,segment:'handshake'}));expect(figures.get('home-0')!.arms[1].quaternion.equals(hand)).toBe(true);
+ expect(JSON.parse(host.dataset.handshakePairs||'[]')).toHaveLength(1);expect(host.dataset.cameraMode).toBe('wide');
+ renderer.render(state,200,false,view({elapsed:18.8,segment:'handshake'}));expect(figures.get('home-0')!.arms[1].quaternion.equals(hand)).toBe(true);
+});
+it.each(['home','away',null] as const)('renders 25 distinct real opponent handshakes for %s without changing the match',winner=>{
+ const {state,renderer,host}=fixture(),before=JSON.stringify(state),start=winner===null?8:16,seen=new Set<string>();
+ for(let r=0;r<9;r++){
+  renderer.render(state,100+r*50,false,view({winner,elapsed:start+2+r*1.6+.8,segment:'handshake'}));
+  const pairs=JSON.parse(host.dataset.handshakePairs||'[]');expect(pairs.length).toBeGreaterThan(0);
+  for(const pair of pairs){expect(pair.handDistance).toBeLessThan(.12);seen.add(pair.homeId+':'+pair.awayId);}
+ }
+ expect(seen.size).toBe(25);expect(JSON.parse(host.dataset.fairPlayCompletedPairs||'[]')).toHaveLength(25);expect(JSON.stringify(state)).toBe(before);
+});
+it('uses relaxed walking arms instead of a keeper save pose in the fair-play line',()=>{
+ const {state,renderer,figures}=fixture();renderer.render(state,100,false,view({elapsed:19.7,segment:'handshake'}));
+ for(const id of ['home-3','away-3'])expect(Math.abs(figures.get(id)!.arms[0].rotation.z)).toBeLessThanOrEqual(.2);
+ for(const rig of figures.values())for(const leg of rig.legs)expect(Math.abs(leg.rotation.x)).toBeLessThanOrEqual(.34);
+ expect(state.players.filter(p=>p.role==='keeper')).toHaveLength(2);
 });
 it('varies close-up framing by theme and uses neutral wide draw framing',()=>{
  const {state,renderer}=fixture();renderer.render(state,100,false,view({theme:0}));const left=renderer.camera.left;renderer.render(state,150,false,view({theme:2}));expect(renderer.camera.left).not.toBe(left);

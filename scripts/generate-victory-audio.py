@@ -1,11 +1,7 @@
-"""Generate original Sloppy Soccer victory music and Windows System.Speech cheers."""
+"""Generate original instrumental Sloppy Soccer victory music only."""
 from array import array
 import math
-import os
 from pathlib import Path
-import struct
-import subprocess
-import sys
 import wave
 
 RATE = 22050
@@ -34,18 +30,6 @@ def write_music(index: int) -> None:
 def main() -> None:
     OUT.mkdir(parents=True, exist_ok=True)
     for i in range(3): write_music(i)
-    if os.name != 'nt':
-        raise SystemExit('Spoken cheers require Windows System.Speech; music WAVs were generated.')
-    script = r'''Add-Type -AssemblyName System.Speech
-$items = @(@('Yeah!','cheer-yeah.wav'), @('We did it!','cheer-we-did-it.wav'), @('We are the champions!','cheer-champions.wav'))
-foreach ($item in $items) {
-  $s = New-Object System.Speech.Synthesis.SpeechSynthesizer
-  $s.SetOutputToWaveFile((Join-Path $env:SOCCER_AUDIO_OUT $item[1]))
-  $s.Speak($item[0]); $s.Dispose()
-}'''
-    env = dict(os.environ, SOCCER_AUDIO_OUT=str(OUT))
-    result = subprocess.run(['powershell.exe', '-NoProfile', '-NonInteractive', '-Command', script], env=env, check=False)
-    if result.returncode: raise SystemExit(result.returncode)
-    print(f'Generated 3 original instrumental loops and 3 System.Speech cheer WAVs in {OUT}')
+    print(f'Generated 3 original instrumental loops in {OUT}; human voice recordings are maintained separately.')
 
 if __name__ == '__main__': main()

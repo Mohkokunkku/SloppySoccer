@@ -257,7 +257,7 @@ function updateUI(): void {
   const partyActive=state.phase==='finished'&&Boolean(postMatch?.view.active);
   element('party-hud').hidden=!partyActive||paused;
   const partyView=postMatch?.view;
-  setText(element('party-title'),partyView?.winner?`${partyView.winner==='home'?'Spain':'Argentina'} wins · ${partyView.segment==='handshake'?'Good game — handshakes':POST_MATCH_THEME_NAMES[partyView.theme]}`:'Honours even · Thanks for playing');
+  setText(element('party-title'),partyView?.segment==='handshake'?'Fair play · Everyone greets every opponent':partyView?.winner?`${partyView.winner==='home'?'Spain':'Argentina'} wins · ${POST_MATCH_THEME_NAMES[partyView.theme]}`:'Honours even · Thanks for playing');
   const canvas=pitch.querySelector('canvas');
   const pitchLabel=`Sloppy Soccer tabletop pitch. ${guide}`;
   if(canvas&&canvas.getAttribute('aria-label')!==pitchLabel)canvas.setAttribute('aria-label',pitchLabel);
