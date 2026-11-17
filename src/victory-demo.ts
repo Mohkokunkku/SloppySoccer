@@ -3,6 +3,7 @@ import './international.css';
 import {createGame} from '../shared/engine';
 import {ToyRenderer} from './renderer';
 import {GameAudio} from './audio';
+import {victoryMusic} from './victory-music';
 import {PostMatchDirector,POST_MATCH_THEME_NAMES} from './post-match';
 const host=document.querySelector<HTMLDivElement>('#victory-pitch')!;
 const status=document.querySelector<HTMLParagraphElement>('#victory-status')!;
@@ -27,7 +28,7 @@ window.addEventListener('blur',suspend);document.addEventListener('visibilitycha
 renderer.start(now=>{
  const dt=last?(now-last)/1000:0;last=now;
  const view=director?.update(dt,paused||document.hidden);
- if(view){if(!paused&&!document.hidden)audio.updatePostMatch(view);status.textContent=`${POST_MATCH_THEME_NAMES[view.theme]} · ${view.winner===null?'Honours even':view.winner==='home'?'Spain wins':'Argentina wins'} · ${paused?'paused':view.segment}`;}
+ if(view){if(!paused&&!document.hidden)audio.updatePostMatch(view);status.textContent=`${POST_MATCH_THEME_NAMES[view.theme]} · ${view.winner===null?'Honours even':view.winner==='home'?'Spain wins':'Argentina wins'} · ${victoryMusic(view).title} · ${paused?'paused':view.segment}`;}
  sound.dataset.active=String(audio.activeCount);sound.dataset.pending=String(audio.pendingCount);sound.dataset.played=String(audio.played);
  renderer.render(state,now,paused,view);
 });

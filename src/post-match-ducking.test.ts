@@ -12,7 +12,7 @@ it('ducks music even when a small cheer decodes before the music and restores on
  vi.stubGlobal('AudioContext',Context);
  let resolveMusic!:(value:unknown)=>void;const music=new Promise(resolve=>{resolveMusic=resolve;});
  const response=()=>({ok:true,arrayBuffer:async()=>new ArrayBuffer(4)});
- vi.stubGlobal('fetch',(url:string)=>url.includes('theme-')?music:Promise.resolve(response()));
+ vi.stubGlobal('fetch',(url:string)=>url==='/audio-v5/spain-toy-pop.wav'?music:Promise.resolve(response()));
  const audio=new GameAudio();audio.setEnabled(true);audio.updatePostMatch({id:'race',active:true,winner:'home',theme:0,elapsed:0,segment:'winners'});
  await flush();expect(audio.activeCount).toBe(1);resolveMusic(response());await flush();expect(audio.activeCount).toBe(2);
  const bed=gains[sources.findIndex(s=>s.loop)];expect(bed.gain.value).toBeCloseTo(.32*.28);

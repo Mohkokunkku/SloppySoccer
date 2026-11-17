@@ -138,6 +138,28 @@ export function planTeamMovement(state: GameState, team: Team): TacticalIntent[]
       .map(other => other.x * sign - 3));
     target.x = clamp(Math.min(target.x * sign, upperDepth), -limitX, limitX) * sign;
   }
+  // Outside an immediate carrier threat, replace the paired fixed rails with
+  // a ball-side step and a deeper central spare. Active shot/pass screens and
+  // secure keeper possession retain their specialised existing plans.
+  const backline = figures.filter(p => tacticalRoleOf(p) === 'defender');
+  if (backline.length === 2 && !activeDefense && owner?.role !== 'keeper') {
+    const stepping = backline.find(p => p.id === presser?.id) ?? [...backline].sort((a,b) =>
+      Math.hypot(a.x-origin.x,a.y-origin.y)-Math.hypot(b.x-origin.x,b.y-origin.y)
+      || a.id.localeCompare(b.id))[0]!;
+    const front = intents.find(t => t.playerId === stepping.id)!;
+    const spare = intents.find(t => backline.some(p => p.id === t.playerId) && t.playerId !== stepping.id)!;
+    if (front.action !== 'press' && front.action !== 'carry') {
+      const supportCap = Math.min(-5, ...intents.filter(t => !backline.some(p => p.id === t.playerId))
+        .map(t => t.x*sign-3));
+      front.x = clamp(Math.min(front.x*sign+1.5,supportCap),-limitX,limitX)*sign;
+      front.y = clamp(origin.y*.65,-5,5);
+    }
+    // Never modify a defender carrying the ball; the other one supplies cover.
+    if (spare.action !== 'carry') {
+      spare.x = clamp(front.x*sign-2.5,-limitX,-4)*sign;
+      spare.y = clamp(origin.y*.18,-1.4,1.4);
+    }
+  }
   return intents;
 }
 

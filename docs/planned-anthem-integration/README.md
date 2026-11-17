@@ -1,0 +1,9 @@
+# Archived pre-approval integration drafts
+
+**Current status2026-11-17:** the user explicitly accepted the victory sound board. The four candidate files have now been restored to their live source/test paths; the national-playback tests were rerun RED against the old runtime and GREEN after integration. Text copies here preserve the earlier interrupted state only, not alternate runtime modules or test results. The former approval boundary below is historical and is no longer pending.
+
+The user requested listening before the winning songs are added to Sloppy Soccer. The songs and standalone sound board are complete; this is not approval to activate them in game audio. A later generic Resume does not waive that specific gate.
+
+These four `.txt` files preserve the interrupted candidate selector and integration tests byte-for-byte. They were newly created drafts, never committed or passing production integration. They intentionally describe a future runtime that fetches team-specific audio-v5 tracks. Running those draft tests against the intentionally unchanged, unapproved game runtime would demand activation contrary to the user's instruction. They are archived as text, not represented as passing/skipped release tests. Once the user approves a track, restore/revise its corresponding tests, watch the expected RED against the then-current runtime, and implement that approved slice. Do not silently enable both tracks.
+
+Current coverage remains the existing gameplay audio/human-shout/ducking/cancellation tests plus independent native playback verification for the standalone board. `python scripts/build-anthem-sound-board.py` reproduces the self-contained board under `.local-server/music-board/`; `python scripts/test-anthem-assets.py` verifies the two source-backed recordings. No game audio entry point is changed by this preview delivery.

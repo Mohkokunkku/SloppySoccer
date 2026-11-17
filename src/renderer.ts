@@ -315,7 +315,7 @@ export class ToyRenderer {
     }
     const enteringCount=state.phase==='entering'?state.players.filter(player=>{const target=kickoffPosition(player.team,Number(player.id.split('-')[1]),'home',this.tuning,state.formations);return Math.hypot(player.x-target.x,player.y-target.y)>.05;}).length:0;
     this.host.dataset.entryAnchorHeight=String(this.entryHeight);this.host.dataset.ballRelease=JSON.stringify(ball.release??null);
-    Object.assign(this.host.dataset,{phase:state.phase,fieldWidth:String(this.tuning.fieldWidth),fieldHeight:String(this.tuning.fieldHeight),goalWidth:String(this.tuning.goalWidth),goalHeight:String(this.tuning.goalHeight),ballRotation:`${this.ball.rotation.x},${this.ball.rotation.y},${this.ball.rotation.z}`,ballPosition:`${ball.x},${ball.y},${ball.z}`,runPhase:String(this.figures.values().next().value?.locomotion?.phase??0),entryCount:String(enteringCount),boardRebuilds:String(this.boardRebuilds)});
+    Object.assign(this.host.dataset,{phase:state.phase,fieldWidth:String(this.tuning.fieldWidth),fieldHeight:String(this.tuning.fieldHeight),goalWidth:String(this.tuning.goalWidth),goalHeight:String(this.tuning.goalHeight),ballRotation:`${this.ball.rotation.x},${this.ball.rotation.y},${this.ball.rotation.z}`,ballPosition:`${ball.x},${ball.y},${ball.z}`,ballOwnerId:ball.ownerId??'',runPhase:String(this.figures.values().next().value?.locomotion?.phase??0),entryCount:String(enteringCount),boardRebuilds:String(this.boardRebuilds)});
     this.renderer.render(this.scene, this.camera);
     this.host.dataset.framesRendered=String(this.renderer.info?.render.frame??0);
   }

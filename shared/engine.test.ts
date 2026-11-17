@@ -432,11 +432,16 @@ describe('role-aware AI movement', () => {
     state.controlledId=`${team}-0`; state.ball.ownerId=state.controlledId;
     const attacker=state.players.find(p=>p.id===state.controlledId)!; attacker.x=12*sign;
     for(const p of state.players.filter(p=>p.team!==team)){p.x=14*sign;p.y=9;}
-    const defender=state.players.find(p=>p.id===`${team}-2`)!;
+    const defenders=state.players.filter(p=>p.team===team&&p.tacticalRole==='defender');
     const middle=state.players.find(p=>p.id===`${team}-1`)!;
     advance(state,2);
-    expect(defender.x*sign).toBeLessThan(-7.4);
-    expect(middle.x*sign-defender.x*sign).toBeGreaterThan(5);
+    const [spare,stepping]=defenders.sort((a,b)=>(a.x-b.x)*sign);
+    // Deep cover still exists, but the requested stepping defender no longer
+    // has to occupy that same old fixed rail (nor a fixed jersey number).
+    expect(spare!.x*sign).toBeLessThan(-7.4);
+    expect(middle.x*sign-spare!.x*sign).toBeGreaterThan(5);
+    expect((stepping!.x-spare!.x)*sign).toBeGreaterThan(1.8);
+    expect(middle.x*sign-stepping!.x*sign).toBeGreaterThan(2);
     expect(attacker.x).toBe(12*sign);
   });
   it('keeps the defender underneath the midfield support while the team attacks', () => {

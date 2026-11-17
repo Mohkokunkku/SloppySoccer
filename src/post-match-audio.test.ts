@@ -10,15 +10,15 @@ function setup(){
 }
 afterEach(()=>vi.unstubAllGlobals());
 const view=(id:string,active=true,theme:0|1|2=0,segment:PostMatchView['segment']='winners',winner:'home'|'away'|null='home'):PostMatchView=>({id,active,winner,theme,elapsed:1,segment});
-it('starts one distinct theme bed per party id, avoids frame repeats, and stops when inactive',async()=>{
+it('starts one national bed per party id, avoids frame repeats, and stops when inactive',async()=>{
  const m=setup(),a=new GameAudio();a.setEnabled(true);a.updatePostMatch(view('match-a'));await flush();
- expect(m.fetcher).toHaveBeenCalledWith('/audio-v3/theme-0.wav');expect(a.activeCount).toBe(2);
+ expect(m.fetcher).toHaveBeenCalledWith('/audio-v5/spain-toy-pop.wav');expect(a.activeCount).toBe(2);
  a.updatePostMatch(view('match-a'));await flush();expect(m.fetcher).toHaveBeenCalledTimes(2);
  a.updatePostMatch(view('match-a',false));expect(a.activeCount).toBe(0);expect(m.sources.every(s=>s.stop.mock.calls.length===1)).toBe(true);
 });
-it('uses three distinct themes, winner-only cheers, and quiet/reenable lifecycle',async()=>{
+it('uses three distinct neutral draw themes, winner-only cheers, and quiet/reenable lifecycle',async()=>{
  const m=setup(),a=new GameAudio();a.setEnabled(true);
- for(const theme of [0,1,2] as const){a.updatePostMatch(view(`theme-${theme}`,true,theme));await flush();a.quiet();}
+ for(const theme of [0,1,2] as const){a.updatePostMatch(view(`theme-${theme}`,true,theme,'draw',null));await flush();a.quiet();}
  expect(m.fetcher.mock.calls.map(c=>c[0])).toEqual(expect.arrayContaining(['/audio-v3/theme-0.wav','/audio-v3/theme-1.wav','/audio-v3/theme-2.wav']));
  const cheersBefore=m.fetcher.mock.calls.filter(c=>String(c[0]).includes('cheer')).length;
  a.updatePostMatch(view('draw',true,0,'draw',null));await flush();expect(m.fetcher.mock.calls.filter(c=>String(c[0]).includes('cheer'))).toHaveLength(cheersBefore);

@@ -1,0 +1,875 @@
+[
+  {
+    "title": "Marcha Real · Toy Pop",
+    "country": "Spain",
+    "file": "spain-toy-pop.wav",
+    "duration_seconds": 32,
+    "bpm": 120,
+    "bars": 16,
+    "sample_rate_hz": 24000,
+    "channels": 2,
+    "format": "PCM signed 16-bit",
+    "peak": 0.8499755859375,
+    "rms": 0.20092810629043859,
+    "clipped_samples": 0,
+    "sha256": "8570829916e56a0e928236b32bb2a6b830941930ebcf069d400c287dbee40d0b",
+    "source": "https://www.joseane.com/polifonicas/marcha-real/",
+    "source_midi": "https://www.joseane.com/media/polifonicas/marcha-real.mid",
+    "source_track": 1,
+    "source_beats": [
+      0,
+      64
+    ],
+    "note_events": [
+      {
+        "pitch": 70,
+        "start": 0.0,
+        "duration": 0.5
+      },
+      {
+        "pitch": 65,
+        "start": 0.5,
+        "duration": 0.25
+      },
+      {
+        "pitch": 74,
+        "start": 0.75,
+        "duration": 0.75
+      },
+      {
+        "pitch": 70,
+        "start": 1.5,
+        "duration": 0.25
+      },
+      {
+        "pitch": 77,
+        "start": 1.75,
+        "duration": 0.25
+      },
+      {
+        "pitch": 75,
+        "start": 2.0,
+        "duration": 0.25
+      },
+      {
+        "pitch": 74,
+        "start": 2.25,
+        "duration": 0.25
+      },
+      {
+        "pitch": 72,
+        "start": 2.5,
+        "duration": 0.25
+      },
+      {
+        "pitch": 70,
+        "start": 2.75,
+        "duration": 0.25
+      },
+      {
+        "pitch": 70,
+        "start": 3.0,
+        "duration": 0.25
+      },
+      {
+        "pitch": 69,
+        "start": 3.25,
+        "duration": 0.25
+      },
+      {
+        "pitch": 67,
+        "start": 3.5,
+        "duration": 0.25
+      },
+      {
+        "pitch": 65,
+        "start": 3.75,
+        "duration": 0.25
+      },
+      {
+        "pitch": 70,
+        "start": 4.0,
+        "duration": 0.5
+      },
+      {
+        "pitch": 72,
+        "start": 4.5,
+        "duration": 0.5
+      },
+      {
+        "pitch": 74,
+        "start": 5.0,
+        "duration": 0.75
+      },
+      {
+        "pitch": 77,
+        "start": 5.75,
+        "duration": 0.25
+      },
+      {
+        "pitch": 75,
+        "start": 6.0,
+        "duration": 0.25
+      },
+      {
+        "pitch": 74,
+        "start": 6.25,
+        "duration": 0.25
+      },
+      {
+        "pitch": 72,
+        "start": 6.5,
+        "duration": 0.25
+      },
+      {
+        "pitch": 70,
+        "start": 6.75,
+        "duration": 0.25
+      },
+      {
+        "pitch": 77,
+        "start": 7.0,
+        "duration": 0.5
+      },
+      {
+        "pitch": 65,
+        "start": 7.75,
+        "duration": 0.125
+      },
+      {
+        "pitch": 67,
+        "start": 7.833333333333333,
+        "duration": 0.125
+      },
+      {
+        "pitch": 69,
+        "start": 7.916666666666667,
+        "duration": 0.125
+      },
+      {
+        "pitch": 70,
+        "start": 8.0,
+        "duration": 0.5
+      },
+      {
+        "pitch": 65,
+        "start": 8.5,
+        "duration": 0.25
+      },
+      {
+        "pitch": 74,
+        "start": 8.75,
+        "duration": 0.75
+      },
+      {
+        "pitch": 70,
+        "start": 9.5,
+        "duration": 0.25
+      },
+      {
+        "pitch": 77,
+        "start": 9.75,
+        "duration": 0.25
+      },
+      {
+        "pitch": 75,
+        "start": 10.0,
+        "duration": 0.25
+      },
+      {
+        "pitch": 74,
+        "start": 10.25,
+        "duration": 0.25
+      },
+      {
+        "pitch": 72,
+        "start": 10.5,
+        "duration": 0.25
+      },
+      {
+        "pitch": 70,
+        "start": 10.75,
+        "duration": 0.25
+      },
+      {
+        "pitch": 70,
+        "start": 11.0,
+        "duration": 0.25
+      },
+      {
+        "pitch": 69,
+        "start": 11.25,
+        "duration": 0.25
+      },
+      {
+        "pitch": 67,
+        "start": 11.5,
+        "duration": 0.25
+      },
+      {
+        "pitch": 65,
+        "start": 11.75,
+        "duration": 0.25
+      },
+      {
+        "pitch": 70,
+        "start": 12.0,
+        "duration": 0.5
+      },
+      {
+        "pitch": 72,
+        "start": 12.5,
+        "duration": 0.5
+      },
+      {
+        "pitch": 74,
+        "start": 13.0,
+        "duration": 0.75
+      },
+      {
+        "pitch": 77,
+        "start": 13.75,
+        "duration": 0.25
+      },
+      {
+        "pitch": 75,
+        "start": 14.0,
+        "duration": 0.25
+      },
+      {
+        "pitch": 74,
+        "start": 14.25,
+        "duration": 0.25
+      },
+      {
+        "pitch": 72,
+        "start": 14.5,
+        "duration": 0.25
+      },
+      {
+        "pitch": 70,
+        "start": 14.75,
+        "duration": 0.25
+      },
+      {
+        "pitch": 77,
+        "start": 15.0,
+        "duration": 0.875
+      },
+      {
+        "pitch": 77,
+        "start": 16.0,
+        "duration": 0.5
+      },
+      {
+        "pitch": 74,
+        "start": 16.5,
+        "duration": 0.375
+      },
+      {
+        "pitch": 77,
+        "start": 16.875,
+        "duration": 0.125
+      },
+      {
+        "pitch": 75,
+        "start": 17.0,
+        "duration": 0.5
+      },
+      {
+        "pitch": 72,
+        "start": 17.5,
+        "duration": 0.375
+      },
+      {
+        "pitch": 75,
+        "start": 17.875,
+        "duration": 0.125
+      },
+      {
+        "pitch": 74,
+        "start": 18.0,
+        "duration": 0.5
+      },
+      {
+        "pitch": 70,
+        "start": 18.5,
+        "duration": 0.375
+      },
+      {
+        "pitch": 74,
+        "start": 18.875,
+        "duration": 0.125
+      },
+      {
+        "pitch": 72,
+        "start": 19.0,
+        "duration": 0.25
+      },
+      {
+        "pitch": 65,
+        "start": 19.25,
+        "duration": 0.25
+      },
+      {
+        "pitch": 67,
+        "start": 19.5,
+        "duration": 0.25
+      },
+      {
+        "pitch": 69,
+        "start": 19.75,
+        "duration": 0.25
+      },
+      {
+        "pitch": 70,
+        "start": 20.0,
+        "duration": 0.5
+      },
+      {
+        "pitch": 72,
+        "start": 20.5,
+        "duration": 0.5
+      },
+      {
+        "pitch": 74,
+        "start": 21.0,
+        "duration": 0.375
+      },
+      {
+        "pitch": 77,
+        "start": 21.375,
+        "duration": 0.125
+      },
+      {
+        "pitch": 77,
+        "start": 21.5,
+        "duration": 0.375
+      },
+      {
+        "pitch": 74,
+        "start": 21.875,
+        "duration": 0.125
+      },
+      {
+        "pitch": 74,
+        "start": 22.0,
+        "duration": 0.5
+      },
+      {
+        "pitch": 72,
+        "start": 22.5,
+        "duration": 0.5
+      },
+      {
+        "pitch": 65,
+        "start": 23.0,
+        "duration": 0.25
+      },
+      {
+        "pitch": 67,
+        "start": 23.25,
+        "duration": 0.125
+      },
+      {
+        "pitch": 69,
+        "start": 23.375,
+        "duration": 0.125
+      },
+      {
+        "pitch": 70,
+        "start": 23.5,
+        "duration": 0.125
+      },
+      {
+        "pitch": 72,
+        "start": 23.625,
+        "duration": 0.125
+      },
+      {
+        "pitch": 74,
+        "start": 23.75,
+        "duration": 0.125
+      },
+      {
+        "pitch": 75,
+        "start": 23.875,
+        "duration": 0.125
+      },
+      {
+        "pitch": 77,
+        "start": 24.0,
+        "duration": 0.5
+      },
+      {
+        "pitch": 74,
+        "start": 24.5,
+        "duration": 0.375
+      },
+      {
+        "pitch": 77,
+        "start": 24.875,
+        "duration": 0.125
+      },
+      {
+        "pitch": 75,
+        "start": 25.0,
+        "duration": 0.5
+      },
+      {
+        "pitch": 72,
+        "start": 25.5,
+        "duration": 0.375
+      },
+      {
+        "pitch": 75,
+        "start": 25.875,
+        "duration": 0.125
+      },
+      {
+        "pitch": 74,
+        "start": 26.0,
+        "duration": 0.5
+      },
+      {
+        "pitch": 70,
+        "start": 26.5,
+        "duration": 0.375
+      },
+      {
+        "pitch": 74,
+        "start": 26.875,
+        "duration": 0.125
+      },
+      {
+        "pitch": 72,
+        "start": 27.0,
+        "duration": 0.25
+      },
+      {
+        "pitch": 65,
+        "start": 27.25,
+        "duration": 0.25
+      },
+      {
+        "pitch": 67,
+        "start": 27.5,
+        "duration": 0.25
+      },
+      {
+        "pitch": 69,
+        "start": 27.75,
+        "duration": 0.25
+      },
+      {
+        "pitch": 70,
+        "start": 28.0,
+        "duration": 0.5
+      },
+      {
+        "pitch": 72,
+        "start": 28.5,
+        "duration": 0.5
+      },
+      {
+        "pitch": 74,
+        "start": 29.0,
+        "duration": 0.375
+      },
+      {
+        "pitch": 77,
+        "start": 29.375,
+        "duration": 0.125
+      },
+      {
+        "pitch": 77,
+        "start": 29.5,
+        "duration": 0.375
+      },
+      {
+        "pitch": 74,
+        "start": 29.875,
+        "duration": 0.125
+      },
+      {
+        "pitch": 74,
+        "start": 30.0,
+        "duration": 0.5
+      },
+      {
+        "pitch": 72,
+        "start": 30.5,
+        "duration": 0.5
+      },
+      {
+        "pitch": 70,
+        "start": 31.0,
+        "duration": 0.875
+      }
+    ]
+  },
+  {
+    "title": "Himno Nacional Argentino · Toy Pop",
+    "country": "Argentina",
+    "file": "argentina-toy-pop.wav",
+    "duration_seconds": 32,
+    "bpm": 120,
+    "bars": 16,
+    "sample_rate_hz": 24000,
+    "channels": 2,
+    "format": "PCM signed 16-bit",
+    "peak": 0.8499755859375,
+    "rms": 0.19595308058723515,
+    "clipped_samples": 0,
+    "sha256": "8edbeaeb5127dd65fb29ad6c2d7b44fa80be148a9d177aa1132aa349e93401ea",
+    "source": "https://earme.cancilleria.gob.ar/es/content/himno-nacional-argentino",
+    "source_midi": "https://earme.cancilleria.gob.ar/userfiles/domain-166/himno.mid",
+    "source_track": 5,
+    "source_beats": [
+      232,
+      296
+    ],
+    "note_events": [
+      {
+        "pitch": 65,
+        "start": 1.5,
+        "duration": 0.375
+      },
+      {
+        "pitch": 65,
+        "start": 1.875,
+        "duration": 0.125
+      },
+      {
+        "pitch": 70,
+        "start": 2.0,
+        "duration": 0.5
+      },
+      {
+        "pitch": 65,
+        "start": 2.5,
+        "duration": 0.5
+      },
+      {
+        "pitch": 62,
+        "start": 3.0,
+        "duration": 0.5
+      },
+      {
+        "pitch": 65,
+        "start": 3.5,
+        "duration": 0.5
+      },
+      {
+        "pitch": 70,
+        "start": 4.0,
+        "duration": 0.5
+      },
+      {
+        "pitch": 70,
+        "start": 4.5,
+        "duration": 0.5
+      },
+      {
+        "pitch": 65,
+        "start": 5.5,
+        "duration": 0.375
+      },
+      {
+        "pitch": 65,
+        "start": 5.875,
+        "duration": 0.125
+      },
+      {
+        "pitch": 70,
+        "start": 6.0,
+        "duration": 0.5
+      },
+      {
+        "pitch": 65,
+        "start": 6.5,
+        "duration": 0.5
+      },
+      {
+        "pitch": 62,
+        "start": 7.0,
+        "duration": 0.5
+      },
+      {
+        "pitch": 65,
+        "start": 7.5,
+        "duration": 0.5
+      },
+      {
+        "pitch": 70,
+        "start": 8.0,
+        "duration": 1.0
+      },
+      {
+        "pitch": 70,
+        "start": 9.5,
+        "duration": 0.375
+      },
+      {
+        "pitch": 74,
+        "start": 9.875,
+        "duration": 0.125
+      },
+      {
+        "pitch": 72,
+        "start": 10.0,
+        "duration": 0.5
+      },
+      {
+        "pitch": 70,
+        "start": 10.5,
+        "duration": 0.5
+      },
+      {
+        "pitch": 69,
+        "start": 11.0,
+        "duration": 0.5
+      },
+      {
+        "pitch": 67,
+        "start": 11.5,
+        "duration": 0.5
+      },
+      {
+        "pitch": 65,
+        "start": 12.0,
+        "duration": 1.25
+      },
+      {
+        "pitch": 70,
+        "start": 13.5,
+        "duration": 0.375
+      },
+      {
+        "pitch": 69,
+        "start": 13.875,
+        "duration": 0.125
+      },
+      {
+        "pitch": 69,
+        "start": 14.0,
+        "duration": 0.5
+      },
+      {
+        "pitch": 67,
+        "start": 14.5,
+        "duration": 0.375
+      },
+      {
+        "pitch": 65,
+        "start": 14.875,
+        "duration": 0.125
+      },
+      {
+        "pitch": 65,
+        "start": 15.0,
+        "duration": 0.25
+      },
+      {
+        "pitch": 63,
+        "start": 15.25,
+        "duration": 0.25
+      },
+      {
+        "pitch": 63,
+        "start": 15.5,
+        "duration": 0.375
+      },
+      {
+        "pitch": 62,
+        "start": 15.875,
+        "duration": 0.125
+      },
+      {
+        "pitch": 62,
+        "start": 16.0,
+        "duration": 0.375
+      },
+      {
+        "pitch": 65,
+        "start": 16.375,
+        "duration": 0.125
+      },
+      {
+        "pitch": 64,
+        "start": 16.5,
+        "duration": 0.125
+      },
+      {
+        "pitch": 65,
+        "start": 16.625,
+        "duration": 0.125
+      },
+      {
+        "pitch": 67,
+        "start": 16.75,
+        "duration": 0.125
+      },
+      {
+        "pitch": 65,
+        "start": 16.875,
+        "duration": 0.125
+      },
+      {
+        "pitch": 60,
+        "start": 17.0,
+        "duration": 0.25
+      },
+      {
+        "pitch": 65,
+        "start": 17.25,
+        "duration": 0.25
+      },
+      {
+        "pitch": 67,
+        "start": 17.5,
+        "duration": 0.25
+      },
+      {
+        "pitch": 69,
+        "start": 17.75,
+        "duration": 0.25
+      },
+      {
+        "pitch": 70,
+        "start": 18.0,
+        "duration": 0.5
+      },
+      {
+        "pitch": 70,
+        "start": 18.5,
+        "duration": 0.375
+      },
+      {
+        "pitch": 70,
+        "start": 18.875,
+        "duration": 0.125
+      },
+      {
+        "pitch": 69,
+        "start": 19.0,
+        "duration": 0.5
+      },
+      {
+        "pitch": 69,
+        "start": 19.5,
+        "duration": 0.25
+      },
+      {
+        "pitch": 69,
+        "start": 19.75,
+        "duration": 0.25
+      },
+      {
+        "pitch": 70,
+        "start": 20.0,
+        "duration": 0.5
+      },
+      {
+        "pitch": 75,
+        "start": 21.0,
+        "duration": 0.75
+      },
+      {
+        "pitch": 75,
+        "start": 21.75,
+        "duration": 0.25
+      },
+      {
+        "pitch": 75,
+        "start": 22.0,
+        "duration": 0.25
+      },
+      {
+        "pitch": 74,
+        "start": 22.25,
+        "duration": 0.25
+      },
+      {
+        "pitch": 72,
+        "start": 22.5,
+        "duration": 0.25
+      },
+      {
+        "pitch": 70,
+        "start": 22.75,
+        "duration": 0.25
+      },
+      {
+        "pitch": 65,
+        "start": 23.0,
+        "duration": 0.5
+      },
+      {
+        "pitch": 69,
+        "start": 23.5,
+        "duration": 0.25
+      },
+      {
+        "pitch": 69,
+        "start": 23.75,
+        "duration": 0.25
+      },
+      {
+        "pitch": 70,
+        "start": 24.0,
+        "duration": 0.5
+      },
+      {
+        "pitch": 75,
+        "start": 25.0,
+        "duration": 0.75
+      },
+      {
+        "pitch": 75,
+        "start": 25.75,
+        "duration": 0.25
+      },
+      {
+        "pitch": 75,
+        "start": 26.0,
+        "duration": 0.25
+      },
+      {
+        "pitch": 74,
+        "start": 26.25,
+        "duration": 0.25
+      },
+      {
+        "pitch": 72,
+        "start": 26.5,
+        "duration": 0.25
+      },
+      {
+        "pitch": 70,
+        "start": 26.75,
+        "duration": 0.25
+      },
+      {
+        "pitch": 65,
+        "start": 27.0,
+        "duration": 0.5
+      },
+      {
+        "pitch": 65,
+        "start": 27.5,
+        "duration": 0.25
+      },
+      {
+        "pitch": 65,
+        "start": 27.75,
+        "duration": 0.25
+      },
+      {
+        "pitch": 70,
+        "start": 28.0,
+        "duration": 1.0
+      }
+    ]
+  }
+]

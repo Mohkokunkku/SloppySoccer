@@ -34,7 +34,11 @@ describe('five-a-side tactical planning', () => {
         const targets=planTeamMovement(state,'home');
         const role=formation==='2-1-1'?'defender':'midfielder';
         const duplicates=targets.filter(t=>tacticalRoleOf(state.players.find(p=>p.id===t.playerId)!)===role);
-        expect(Math.abs(duplicates[0]!.y-duplicates[1]!.y)).toBeGreaterThanOrEqual(4);
+        if(formation==='2-1-1'&&phase==='loose') {
+          // The requested ball-side step/central spare replaces fixed wide DEF rails.
+          expect(Math.abs(duplicates[0]!.x-duplicates[1]!.x)).toBeGreaterThanOrEqual(2);
+          expect(Math.hypot(duplicates[0]!.x-duplicates[1]!.x,duplicates[0]!.y-duplicates[1]!.y)).toBeGreaterThanOrEqual(2);
+        } else expect(Math.abs(duplicates[0]!.y-duplicates[1]!.y)).toBeGreaterThanOrEqual(4);
         expect(targets.filter(t=>t.action==='press').length).toBeLessThanOrEqual(1);
         const middle=targets.filter(t=>tacticalRoleOf(state.players.find(p=>p.id===t.playerId)!)==='midfielder');
         for(const target of targets.filter(t=>tacticalRoleOf(state.players.find(p=>p.id===t.playerId)!)==='defender'&&t.action!=='press')) {

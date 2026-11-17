@@ -2,6 +2,7 @@ import type {GameState} from '../shared/types';
 import {AudioEvents,type SoundEvent} from './audio-events';
 import type {PostMatchView} from './post-match';
 import {HUMAN_SHOUTS} from './human-shouts';
+import {victoryMusic} from './victory-music';
 const SHOUT_PATHS=new Map(HUMAN_SHOUTS.map(clip=>[clip.id,clip.path]));
 const MIX={kick:[['kick',.55]],'pass-me':[['voice-go',.6]],here:[['voice-yes',.6]],'crowd-shot':[['crowd-shot',.38]],goal:[['crowd-goal',.65],['goal-music',.42]]} as const;
 /** Gesture-unlocked, opt-in sample playback. No synthetic speech or oscillator fallback. */
@@ -31,18 +32,18 @@ export class GameAudio {
   if(!this.enabled||!view?.active){if(this.partyActive)this.quiet();return;}
   if(this.partyActive&&this.partyId===view.id)return;
   this.quiet();this.partyActive=true;this.partyId=view.id;const generation=this.generation,partyGeneration=++this.partyGeneration;
-  void this.sample(`theme-${view.theme}`,.32,generation,true);
+  const music=victoryMusic(view);void this.sample(music.id,.32,generation,true,0,music.path);
   if(view.winner!==null){const cheers=['cheer-yeah','cheer-we-did-it','cheer-champions'];const cheer=cheers[this.cheerIndex++%cheers.length];void this.sample(cheer,.8,generation,false,partyGeneration);}
  }
  play(event:SoundEvent):void{if(!this.enabled)return;for(const [name,gain] of MIX[event])void this.sample(name,gain,this.generation);}
- private async sample(name:string,volume:number,generation:number,loop=false,partyGeneration=0):Promise<void>{
+ private async sample(name:string,volume:number,generation:number,loop=false,partyGeneration=0,sourcePath?:string):Promise<void>{
   if(this.pending.size>=12)return;
   const ticket={};this.pending.add(ticket);
   try{
    await this.unlock();const ctx=this.context;
    if(!ctx||!this.enabled||generation!==this.generation||ctx.state!=='running'||(partyGeneration&&partyGeneration!==this.partyGeneration))return;
    let buffer=this.buffers.get(name);
-   if(!buffer){const path=SHOUT_PATHS.get(name)??`/${name.startsWith('theme-')?'audio-v3':'audio-v2'}/${name}.wav`;buffer=fetch(path).then(async response=>{if(!response.ok)throw new Error('Missing sample');return ctx.decodeAudioData(await response.arrayBuffer());});this.buffers.set(name,buffer);void buffer.catch(()=>{if(this.buffers.get(name)===buffer)this.buffers.delete(name);});}
+   if(!buffer){const path=sourcePath??SHOUT_PATHS.get(name)??`/${name.startsWith('theme-')?'audio-v3':'audio-v2'}/${name}.wav`;buffer=fetch(path).then(async response=>{if(!response.ok)throw new Error('Missing sample');return ctx.decodeAudioData(await response.arrayBuffer());});this.buffers.set(name,buffer);void buffer.catch(()=>{if(this.buffers.get(name)===buffer)this.buffers.delete(name);});}
    const decoded=await buffer;
    if(!this.enabled||generation!==this.generation||ctx.state!=='running'||(partyGeneration&&partyGeneration!==this.partyGeneration))return;
    while(this.active.size>=6){const oldest=this.active.keys().next().value;if(oldest)this.stop(oldest);}
