@@ -58,6 +58,23 @@ describe('planTeamMovement', () => {
     expect(defender.x).toBeLessThan(player(state,'away-0').x);
     expect(defender.x).toBeLessThan(middle.x);
   });
+  it.each([-1, 1] as const)('staggered defenders flip ball-side press and central spare cover on wing %s', wing => {
+    const state = createGame();
+    state.phase = 'playing'; state.controls = []; state.controlledId = 'none';
+    const carrier = player(state, 'away-1');
+    Object.assign(carrier, {x:-7,y:wing * 6});
+    Object.assign(state.ball, {ownerId:carrier.id,x:carrier.x,y:carrier.y});
+    Object.assign(player(state, 'home-2'), {x:-10,y:wing * 5});
+    Object.assign(player(state, 'home-4'), {x:-11,y:-wing * 2});
+    const targets = planTeamMovement(state, 'home');
+    const stepping = targets.find(t => t.playerId === 'home-2')!;
+    const spare = targets.find(t => t.playerId === 'home-4')!;
+    expect(stepping.action).toBe('press');
+    expect(spare.action).toBe('cover');
+    expect(Math.abs(spare.y)).toBeLessThan(Math.abs(stepping.y));
+    expect(spare.x).toBeLessThan(stepping.x);
+    expect(targets.filter(t => t.action === 'press')).toHaveLength(1);
+  });
   it('sends only one chaser after a moving loose ball while the other roles hold shape', () => {
     const state = setup();
     Object.assign(state.ball,{ownerId:null,x:4,y:1,vx:8,vy:0});

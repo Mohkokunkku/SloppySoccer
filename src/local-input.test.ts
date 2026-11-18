@@ -10,7 +10,7 @@ describe('LocalInputHub', () => {
     hub.keyDown('KeyE'); hub.keyDown('KeyE', true); hub.pointerDown(1, 'Space');
     hub.keyDown('Period'); hub.pointerUp(1); hub.pointerDown(1, 'KeyQ');
     expect(hub.poll().actionGroups).toEqual({
-      p1: [{shoot:false,pass:true,switchPlayer:false},{shoot:true,pass:false,switchPlayer:false},{shoot:false,pass:false,switchPlayer:true}],
+      p1: [{shoot:false,pass:true,switchPlayer:false},{shoot:false,pass:false,switchPlayer:false,chargeStart:true},{shoot:true,pass:false,switchPlayer:false,shotCharge:expect.any(Number)},{shoot:false,pass:false,switchPlayer:true}],
       p2: [{shoot:false,pass:false,switchPlayer:true}],
     });
     expect(hub.poll().actionGroups).toEqual({p1:[],p2:[]});
@@ -24,10 +24,11 @@ describe('LocalInputHub', () => {
     hub.setSeats([{id:'p1',team:'home',device:'gamepad:0'}]);
     device.buttons[0].pressed=true; device.buttons[1].pressed=true;
     const result=hub.poll();
-    expect(result.inputs.p1).toMatchObject({pass:true,shoot:true});
-    expect(result.actionGroups.p1).toEqual([{pass:true,shoot:true,switchPlayer:false}]);
+    expect(result.inputs.p1).toMatchObject({pass:true,shoot:false,chargeStart:true,shootHeld:true});
+    expect(result.actionGroups.p1).toEqual([{pass:false,shoot:false,switchPlayer:false,chargeStart:true},{pass:true,shoot:false,switchPlayer:false}]);
     const queue=new LocalInputQueue(); queue.push(result.inputs,result.actionGroups);
-    expect(queue.consume().p1).toMatchObject({pass:true,shoot:true});
+    expect(queue.consume().p1).toMatchObject({pass:false,shoot:false,chargeStart:true});
+    expect(queue.consume().p1).toMatchObject({pass:true,shoot:false});
     expect(queue.consume().p1).toMatchObject({pass:false,shoot:false});
     expect(hub.poll().actionGroups.p1).toEqual([]);
   });
@@ -36,15 +37,16 @@ describe('LocalInputHub', () => {
     for (const key of ['KeyW', 'KeyD', 'ArrowLeft', 'Enter', 'Space', 'ShiftRight']) hub.keyDown(key);
     const first = hub.poll().inputs;
     expect(Math.hypot(first.p1.moveX, first.p1.moveY)).toBeCloseTo(1);
-    expect(first.p1.shoot).toBe(true); expect(first.p1.sprint).toBe(false);
-    expect(first.p2).toMatchObject({ moveX: -1, shoot: true, sprint: true });
+    expect(first.p1).toMatchObject({shoot:false,chargeStart:true,shootHeld:true}); expect(first.p1.sprint).toBe(false);
+    expect(first.p2).toMatchObject({ moveX: -1, shoot:false,chargeStart:true,shootHeld:true, sprint: true });
     expect(hub.poll().inputs.p1.shoot).toBe(false);
   });
   it('retains legacy aliases only without keyboard2 and routes touch only to first seat', () => {
     const hub = new LocalInputHub(() => []); hub.keyDown('ArrowRight'); hub.keyDown('ShiftRight');
     expect(hub.poll().inputs.p1).toMatchObject({ moveX: 1, sprint: true });
     hub.setSeats(seats); hub.pointerDown(1, 'Space');
-    expect(hub.poll().inputs.p1.shoot).toBe(true); expect(hub.poll().inputs.p2.shoot).toBe(false);
+    expect(hub.poll().inputs.p1).toMatchObject({shoot:false,chargeStart:true,shootHeld:true});expect(hub.poll().inputs.p2.shoot).toBe(false);
+    hub.pointerUp(1);expect(hub.poll().inputs.p1.shoot).toBe(true);
   });
   it('maps standard pad edges, radial deadzone, finite axes and disconnects honestly', () => {
     let devices: (ReturnType<typeof pad> | null)[] = [pad()]; const hub = new LocalInputHub(() => devices as unknown as Gamepad[]);
@@ -70,7 +72,7 @@ describe('LocalInputHub', () => {
     hub.keyDown('KeyD', false); hub.keyDown('Space', false);
     hub.clear(); // Released outside the window: no keyUp is delivered.
     hub.keyDown('KeyD', false); hub.keyDown('Space', false);
-    expect(hub.poll().inputs.p1).toMatchObject({ moveX: 1, shoot: true });
+    expect(hub.poll().inputs.p1).toMatchObject({ moveX:1,shoot:false,chargeStart:true,shootHeld:true });
     expect(hub.poll().inputs.p1.shoot).toBe(false);
   });
   it('suppresses held repeats after clear until release and preserves pending pulses', () => {

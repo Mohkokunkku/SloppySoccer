@@ -72,7 +72,7 @@ it('retains the entrance anchor through live pitch resizing and releases it at k
  vi.stubGlobal('window',{matchMedia:()=>({matches:false}),devicePixelRatio:1});vi.stubGlobal('document',{createElement:element});vi.stubGlobal('ResizeObserver',class{observe(){}disconnect(){}});
  try{
   const host={...element(),clientWidth:900,clientHeight:600};const state=createGame();const renderer=new ToyRenderer(host as unknown as HTMLElement,state);renderer.render(state,100);startGame(state,true);renderer.render(state,150);
-  for(const height of [30,12]){applyTuning(state,{fieldHeight:height});renderer.render(state,200+height,true);expect(renderer.scene.getObjectByName('entry-tunnel')!.position.z).toBe(12);expect((host.dataset as Record<string,string>).entryAnchorHeight).toBe('20');}
+  for(const height of [30,12]){applyTuning(state,{fieldHeight:height});renderer.render(state,200+height,true);expect(renderer.scene.getObjectByName('entry-tunnel')!.position.z).toBe(DEFAULT_TUNING.fieldHeight/2+2);expect((host.dataset as Record<string,string>).entryAnchorHeight).toBe(String(DEFAULT_TUNING.fieldHeight));}
   state.phase='playing';delete state.entrance;renderer.render(state,400);expect(renderer.scene.getObjectByName('entry-tunnel')!.position.z).toBe(8);expect((host.dataset as Record<string,string>).entryAnchorHeight).toBe('12');renderer.dispose();
  }finally{vi.unstubAllGlobals();}
 });

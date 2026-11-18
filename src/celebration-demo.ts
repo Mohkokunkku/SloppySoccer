@@ -1,6 +1,7 @@
 import './style.css';import './international.css';
 import {createGame,startGame,stepGame} from '../shared/engine';
-import {EMPTY_INPUT,type Team} from '../shared/types';
+import {EMPTY_INPUT,FIELD,type Team} from '../shared/types';
+import {getTuning} from '../shared/tuning';
 import {ToyRenderer} from './renderer';import {FixedStepper} from './loop';
 import {DANCE_NAMES} from './celebrations';import {TEAMS} from './teams';import {GameAudio} from './audio';
 const host=document.querySelector<HTMLDivElement>('#demo-pitch')!;
@@ -10,7 +11,7 @@ const renderer=new ToyRenderer(host,state);
 function show(style:number):void{
  const team=(document.querySelector<HTMLSelectElement>('#demo-team')!.value as Team);selected=style;state=createGame();startGame(state);state.score[team]=style;
  for(const p of state.players.filter(p=>p.team===team)){const slot=Number(p.id.split('-')[1]);p.x=(10+slot*0.7)*(team==='home'?1:-1);p.y=-4+slot*2.5;}
- audio.reset();void audio.unlock();audio.update(state);Object.assign(state.ball,{x:team==='home'?16.4:-16.4,y:0,z:0,vx:0,vy:0,vz:0,ownerId:null});stepGame(state,EMPTY_INPUT,1/60);audio.update(state);
+ audio.reset();void audio.unlock();audio.update(state);Object.assign(state.ball,{x:(team==='home'?1:-1)*(getTuning(state).fieldWidth/2+FIELD.ballRadius+.12),y:0,z:0,vx:0,vy:0,vz:0,ownerId:null});stepGame(state,EMPTY_INPUT,1/60);audio.update(state);
  stepper.reset();last=0;
  status.dataset.danceStyle=String(style);status.dataset.danceName=DANCE_NAMES[style];
  for(const button of document.querySelectorAll<HTMLButtonElement>('[data-dance]'))button.setAttribute('aria-pressed',String(Number(button.dataset.dance)===style));

@@ -1,0 +1,5 @@
+#local-control-guide {display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,290px),1fr));gap:12px;width:100%;flex-basis:100%;grid-column:1/-1;}
+.control-help {width:100%;flex-basis:100%;grid-column:1/-1;}.control-help>summary{cursor:pointer;padding:8px 0;font-size:.85rem;font-weight:700;}
+.control-guide-card {display:grid;min-width:0;align-content:start;margin:0;padding:10px;border:1px solid #bbb5a7;border-radius:10px;}
+.control-guide-card img { display: block; width: 100%; height: auto; }
+.control-guide-card p { margin: 6px 0 0; font-size: .78rem; line-height: 1.3; }

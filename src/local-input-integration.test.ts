@@ -17,10 +17,11 @@ it('delivers two keyboard taps per independent seat observed before one poll',()
 
 it.each(['keyboard','touch'] as const)('preserves %s pass then shot observed before a single poll',source=>{
   const {state,hub,raf}=setup();
-  if(source==='keyboard'){hub.keyDown('KeyE');hub.keyUp('KeyE');hub.keyDown('Space');}
-  else {hub.pointerDown(1,'KeyE');hub.pointerUp(1);hub.pointerDown(2,'Space');}
+  if(source==='keyboard'){hub.keyDown('KeyE');hub.keyUp('KeyE');hub.keyDown('Space');hub.keyUp('Space');}
+  else {hub.pointerDown(1,'KeyE');hub.pointerUp(1);hub.pointerDown(2,'Space');hub.pointerUp(2);}
   raf(1/60);expect(state.ball.release?.type).toBe('pass');const id=state.ball.release!.id;
   state.ball.ownerId=state.controls![0]!.playerId;raf(1/60);
+  expect(state.ball.release?.id).toBe(id);expect(state.shotCharges?.p1).toBeDefined();raf(1/60);
   expect(state.ball.release?.type).toBe('shot');expect(state.ball.release?.id).toBe(id+1);
   state.ball.ownerId=state.controls![0]!.playerId;raf(1/60);expect(state.ball.release?.id).toBe(id+1);
 });
@@ -33,7 +34,7 @@ function setup(seats:LocalSeat[]=[{id:'p1',team:'home',device:'keyboard1'}]) {
   return {state,hub,queue,stepper,raf};
 }
 
-it.each([['shoot','Space','shot'],['pass','KeyE','pass']] as const)('delivers distinct %s presses on adjacent ticks across a release RAF with no tick',(action,key,type)=>{
+it.each([['pass','KeyE','pass']] as const)('delivers distinct %s presses on adjacent ticks across a release RAF with no tick',(action,key,type)=>{
   const {state,hub,raf}=setup();
   hub.keyDown(key);expect(raf(1/60)).toBe(1);
   expect(state.ball.release?.type).toBe(type);const first=state.ball.release!.id;
@@ -65,6 +66,7 @@ it('consumes intro pulses and clears pending skip/pause events at the caller bou
   skipIntro(state);hub.clear();queue.clear();stepper.reset();raf(1/60);
   expect(state.ball.release).toBeUndefined();expect(state.controlledId).toBe('home-0');
   hub.keyUp('Space');raf(1/240);hub.keyDown('Space');raf(1/80);
+  expect(state.ball.release).toBeUndefined();hub.keyUp('Space');raf(1/60);
   expect(state.ball.release?.type).toBe('shot');
   hub.keyUp('Space');hub.keyDown('KeyQ');expect(raf(1/240)).toBe(0);
   const id=state.controlledId;hub.clear();queue.clear();stepper.reset();raf(1/60);
@@ -89,10 +91,24 @@ it('keeps pass before shoot from different polls before the first simulation tic
   hub.keyDown('KeyE');expect(raf(1/240)).toBe(0);
   hub.keyUp('KeyE');expect(raf(1/240)).toBe(0);
   hub.keyDown('Space');expect(raf(1/240)).toBe(0);
+  hub.keyUp('Space');
   expect(raf(1/240)).toBe(1);expect(state.ball.release?.type).toBe('pass');const first=state.ball.release!.id;
   // Restore possession only: test queued delivery, not travel or pickup timing.
   state.ball.ownerId=state.controls![0]!.playerId;
+  raf(1/60);expect(state.ball.release?.type).toBe('pass');expect(state.shotCharges?.p1).toBeDefined();
   raf(1/60);expect(state.ball.release?.type).toBe('shot');expect(state.ball.release?.id).toBe(first+1);
   state.ball.ownerId=state.controls![0]!.playerId;
   raf(1/60);expect(state.ball.release?.id).toBe(first+1);
+});
+
+it('preserves charged start and release across RAFs without a simulation tick',()=>{
+ const {state,hub,raf}=setup();
+ hub.keyDown('Space');raf(1/60);expect(state.ball.release).toBeUndefined();
+ hub.keyUp('Space');expect(raf(1/240)).toBe(0);expect(raf(1/80)).toBe(1);
+ expect(state.ball.release?.type).toBe('shot');const first=state.ball.release!.id;
+ state.ball.ownerId=state.controls![0]!.playerId;
+ hub.keyDown('Space');expect(raf(1/240)).toBe(0);hub.keyUp('Space');expect(raf(1/80)).toBe(1);
+ expect(state.ball.release?.id).toBe(first);expect(state.shotCharges?.p1).toBeDefined();
+ raf(1/60);expect(state.ball.release?.id).toBe(first+1);
+ state.ball.ownerId=state.controls![0]!.playerId;raf(1/60);expect(state.ball.release?.id).toBe(first+1);
 });

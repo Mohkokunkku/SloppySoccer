@@ -5,6 +5,7 @@ import { DEFAULT_TUNING } from './tuning.js';
 import type { Formation, GameState, Team } from './types.js';
 
 const setup = (formation: Formation): GameState => ({
+  tuning:{...DEFAULT_TUNING,fieldWidth:32,fieldHeight:20},
   formations:{home:formation,away:formation}, controls:[], controlledId:'none',
   players:(['home','away'] as Team[]).flatMap(team => [0,1,2,3,4].map(slot => ({
     id:`${team}-${slot}`,team,role:slot === 3 ? 'keeper' as const : 'outfield' as const,
@@ -33,7 +34,12 @@ describe('five-a-side tactical planning', () => {
         const targets=planTeamMovement(state,'home');
         const role=formation==='2-1-1'?'defender':'midfielder';
         const duplicates=targets.filter(t=>tacticalRoleOf(state.players.find(p=>p.id===t.playerId)!)===role);
-        expect(Math.abs(duplicates[0]!.y-duplicates[1]!.y)).toBeGreaterThanOrEqual(4);
+        if(formation==='2-1-1'&&phase==='loose') {
+          // Wide support is restored, with just a small non-collinear depth offset.
+          expect(Math.abs(duplicates[0]!.x-duplicates[1]!.x)).toBeGreaterThan(.25);
+          expect(Math.abs(duplicates[0]!.x-duplicates[1]!.x)).toBeLessThan(1.5);
+          expect(Math.abs(duplicates[0]!.y-duplicates[1]!.y)).toBeGreaterThanOrEqual(6);
+        } else expect(Math.abs(duplicates[0]!.y-duplicates[1]!.y)).toBeGreaterThanOrEqual(4);
         expect(targets.filter(t=>t.action==='press').length).toBeLessThanOrEqual(1);
         const middle=targets.filter(t=>tacticalRoleOf(state.players.find(p=>p.id===t.playerId)!)==='midfielder');
         for(const target of targets.filter(t=>tacticalRoleOf(state.players.find(p=>p.id===t.playerId)!)==='defender'&&t.action!=='press')) {

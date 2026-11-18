@@ -1,5 +1,15 @@
 #local-lobby { min-width: 0; margin: 12px 0; padding: 12px; border: 1px solid #bbb5a7; border-radius: 10px; }
 #local-lobby legend { padding: 0 6px; font-weight: 700; }
+.team-drop-zones { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.team-drop-zone { min-width:0;min-height:96px; padding:10px; border:2px dashed #aaa; border-radius:10px; }
+.team-drop-zone > strong {display:block;margin-bottom:10px;}
+.team-drop-zone[data-team='home'] { border-color: #c9363e; }
+.team-drop-zone[data-team='away'] { border-color: #4b72c2; }
+#local-lobby .player-token {width:auto;max-width:100%;min-height:44px;height:auto;margin:0 5px 6px 0;padding:8px 10px;border:2px solid #173549;border-radius:12px;color:#173549;font-size:.82rem;font-weight:700;cursor:grab;overflow-wrap:anywhere;}
+#local-lobby .player-token:focus-visible {outline:3px solid #173549;outline-offset:3px;}
+#local-lobby .player-token-p1 {background:#ffe183;}#local-lobby .player-token-p2 {background:#7ce9ff;}
+#local-lobby .player-token-p3 {background:#ff91d5;}#local-lobby .player-token-p4 {background:#aaff8c;}
+#local-lobby .player-token[hidden] {display:none;}
 #local-lobby-help { margin: 0 0 10px; font-size: 0.85rem; line-height: 1.5; }
 #local-lobby .local-seat { display: grid; grid-template-columns: auto minmax(70px, 1fr) minmax(110px, 2fr); gap: 8px; align-items: center; padding: 8px 0; border-top: 1px solid #bbb5a7; }
 #local-lobby label { display: flex; flex-wrap: wrap; gap: 5px; align-items: center; min-width: 0; font-size: 0.85rem; }

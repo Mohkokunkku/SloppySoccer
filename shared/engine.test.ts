@@ -1,11 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import { planTeamMovement } from './tactics.js';
-import { createGame, startGame, stepGame } from './engine';
+import { createGame, startGame, stepGame, kickoffPosition } from './engine';
+import {DEFAULT_TUNING} from './tuning';
 import { EMPTY_INPUT, FIELD, type GameState, type InputState } from './types';
 
 const frame = 1 / 60;
 const input = (changes: Partial<InputState> = {}): InputState => ({ ...EMPTY_INPUT, ...changes });
-const play = () => { const state = createGame(); startGame(state); return state; };
+// Legacy mechanics fixtures use an explicit canonical field; defaults have separate coverage.
+const play = () => { const state = createGame(); state.tuning={...DEFAULT_TUNING,fieldWidth:32,fieldHeight:20}; for(const p of state.players)Object.assign(p,kickoffPosition(p.team,Number(p.id.slice(-1)),'home',state.tuning,state.formations));startGame(state);return state; };
 const advance = (state: GameState, seconds: number, controls = input()) => {
   for (let i = 0; i < Math.round(seconds / frame); i++) stepGame(state, controls, frame);
 };
@@ -430,11 +432,18 @@ describe('role-aware AI movement', () => {
     state.controlledId=`${team}-0`; state.ball.ownerId=state.controlledId;
     const attacker=state.players.find(p=>p.id===state.controlledId)!; attacker.x=12*sign;
     for(const p of state.players.filter(p=>p.team!==team)){p.x=14*sign;p.y=9;}
-    const defender=state.players.find(p=>p.id===`${team}-2`)!;
+    const defenders=state.players.filter(p=>p.team===team&&p.tacticalRole==='defender');
     const middle=state.players.find(p=>p.id===`${team}-1`)!;
     advance(state,2);
-    expect(defender.x*sign).toBeLessThan(-7.4);
-    expect(middle.x*sign-defender.x*sign).toBeGreaterThan(5);
+    const [spare,stepping]=defenders.sort((a,b)=>(a.x-b.x)*sign);
+    // Deep cover still exists, but the requested stepping defender no longer
+    // has to occupy that same old fixed rail (nor a fixed jersey number).
+    expect(spare!.x*sign).toBeLessThan(-7.4);
+    expect(middle.x*sign-spare!.x*sign).toBeGreaterThan(5);
+    expect((stepping!.x-spare!.x)*sign).toBeGreaterThan(.25);
+    expect((stepping!.x-spare!.x)*sign).toBeLessThan(1.5);
+    expect(Math.abs(stepping!.y-spare!.y)).toBeGreaterThanOrEqual(6);
+    expect(middle.x*sign-stepping!.x*sign).toBeGreaterThan(2);
     expect(attacker.x).toBe(12*sign);
   });
   it('keeps the defender underneath the midfield support while the team attacks', () => {
@@ -488,8 +497,8 @@ describe('tactical role identity', () => {
   it.each(['home', 'away'] as const)('starts %s with visibly distinct attacker, midfield and deep defense', team => {
     const state = createGame(); const sign = team === 'home' ? 1 : -1;
     const [attacker, middle, defender] = state.players.filter(p => p.team === team);
-    expect(defender!.x * sign).toBe(-10);
-    expect(middle!.x * sign).toBe(-5);
+    expect(defender!.x * sign).toBe(-10*DEFAULT_TUNING.fieldWidth/32);
+    expect(middle!.x * sign).toBe(-5*DEFAULT_TUNING.fieldWidth/32);
     expect(attacker!.x * sign).toBeGreaterThan(middle!.x * sign);
   });
   it.each(['home', 'away'] as const)('assigns one attacker, midfielder and defender to %s without changing keeper identity', team => {

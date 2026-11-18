@@ -12,7 +12,7 @@ Kenney **Voiceover Pack**: https://kenney.nl/assets/voiceover-pack
 CC0: https://creativecommons.org/publicdomain/zero/1.0/ .
 - `voice-go.wav`: male `go.ogg`, recorded by **Jeffrey M. Smith**. Says **“Go!”**, not “Pass me”.
 - `voice-yes.wav`: female `hurry_up.ogg`, recorded by **Giselle**. Says **“Hurry up!”**, not “Yes” or “Over here”. Filename is an internal historical cue name only.
-Credits are from the original pack's `Credits.txt`. Changes: mono WAV resampling, normalization, EQ/fades. These are recorded human performances, not generated speech.
+Credits are from the original pack's `Credits.txt`. Voices are now direct mono 24 kHz PCM conversions from the original recordings, without the earlier EQ/normalization. No pitch shifting or speech synthesis is used. These are recorded human performances, not generated speech. Runtime vocal URLs include a human-version cache key so previously cached synthetic cheers are not reused.
 
 ## Ball impact — CC0
 `kick.wav`: Kenney **Impact Sounds**, `impactSoft_heavy_000.ogg`.

@@ -23,6 +23,12 @@ import {localControlGuide,selectedLocalConfig} from './local-config';
  });
 
  describe('persistent active seat guide',()=>{
+  it('explains hold and release shooting in the canvas screen-reader guide',()=>{
+    for(const device of ['keyboard1','keyboard2','gamepad:0'] as const){
+      const guide=localControlGuide([{id:'p1',team:'home',device}]).toLowerCase();
+      expect(guide).toContain('hold');expect(guide).toContain('release');
+    }
+  });
   it('gives keyboard1 its team and solo arrow aliases',()=>{
     const guide=localControlGuide([{id:'p1',team:'away',device:'keyboard1'}]);
     for(const text of ['P1 Argentina ←','WASD','arrows','Space','E pass','Q switch','Left Shift'])expect(guide).toContain(text);
