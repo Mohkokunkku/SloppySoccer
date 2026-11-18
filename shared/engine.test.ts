@@ -440,7 +440,9 @@ describe('role-aware AI movement', () => {
     // has to occupy that same old fixed rail (nor a fixed jersey number).
     expect(spare!.x*sign).toBeLessThan(-7.4);
     expect(middle.x*sign-spare!.x*sign).toBeGreaterThan(5);
-    expect((stepping!.x-spare!.x)*sign).toBeGreaterThan(1.8);
+    expect((stepping!.x-spare!.x)*sign).toBeGreaterThan(.25);
+    expect((stepping!.x-spare!.x)*sign).toBeLessThan(1.5);
+    expect(Math.abs(stepping!.y-spare!.y)).toBeGreaterThanOrEqual(6);
     expect(middle.x*sign-stepping!.x*sign).toBeGreaterThan(2);
     expect(attacker.x).toBe(12*sign);
   });

@@ -22,17 +22,20 @@ test('real keyboard hold fills the authorized meter, release shoots, pause cance
  // Observe renderer diagnostics only; do not inject or replace game state.
  await page.locator('#pitch').evaluate(node=>{const w=window as unknown as {shotReleases:{type:string;playerId:string}[]};w.shotReleases=[];new MutationObserver(()=>{const r=JSON.parse(node.getAttribute('data-ball-release')??'null');if(r)w.shotReleases.push(r);}).observe(node,{attributes:true,attributeFilter:['data-ball-release']});});
  await startPartyMatch(page);
- await page.keyboard.down('KeyA');await page.keyboard.down('Space');
+ // Charge while moving into an open flank, not backwards into our defenders.
+ await page.keyboard.down('KeyW');await page.keyboard.down('Space');
  const meter=page.locator('.kick-meter[data-seat="p1"]');await expect(meter).toHaveAttribute('data-charging','true');
  await expect.poll(async()=>Number(await meter.locator('[role="progressbar"]').getAttribute('aria-valuenow'))).toBeGreaterThan(25);
- await meter.screenshot({path:test.info().outputPath('charged-kick.png')});
- // Aim across the pitch, not backwards into our keeper's immediate clearance.
- await page.keyboard.up('KeyA');await page.keyboard.down('KeyW');await page.keyboard.up('Space');
+ // Do not hold movement through a potentially slow screenshot: on a loaded
+ // machine that drove all the way to our end line and an immediate teammate
+ // interception/pass replaced the latest-release diagnostic in the same RAF.
+ await page.keyboard.up('Space');
  await expect.poll(()=>page.evaluate(()=>{
   const releases=(window as unknown as {shotReleases:{type:string;playerId:string}[]}).shotReleases;
   return releases.some(r=>r.type==='shot'&&r.playerId==='home-0');
  })).toBe(true);await expect(meter).toHaveAttribute('data-charging','false');
  await page.keyboard.up('KeyW');
+ await meter.screenshot({path:test.info().outputPath('released-kick.png')});
  await page.locator('#restart').click();await expect(page.locator('#skip-intro')).toBeVisible({timeout:30000});await page.locator('#skip-intro').click();
  await page.keyboard.down('Space');await expect(meter).toHaveAttribute('data-charging','true');await page.keyboard.press('Escape');await page.keyboard.up('Space');
  await expect(page.locator('#phase-label')).toHaveText('Paused');await expect(meter).toHaveAttribute('data-charging','false');

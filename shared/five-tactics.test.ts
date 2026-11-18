@@ -35,9 +35,10 @@ describe('five-a-side tactical planning', () => {
         const role=formation==='2-1-1'?'defender':'midfielder';
         const duplicates=targets.filter(t=>tacticalRoleOf(state.players.find(p=>p.id===t.playerId)!)===role);
         if(formation==='2-1-1'&&phase==='loose') {
-          // The requested ball-side step/central spare replaces fixed wide DEF rails.
-          expect(Math.abs(duplicates[0]!.x-duplicates[1]!.x)).toBeGreaterThanOrEqual(2);
-          expect(Math.hypot(duplicates[0]!.x-duplicates[1]!.x,duplicates[0]!.y-duplicates[1]!.y)).toBeGreaterThanOrEqual(2);
+          // Wide support is restored, with just a small non-collinear depth offset.
+          expect(Math.abs(duplicates[0]!.x-duplicates[1]!.x)).toBeGreaterThan(.25);
+          expect(Math.abs(duplicates[0]!.x-duplicates[1]!.x)).toBeLessThan(1.5);
+          expect(Math.abs(duplicates[0]!.y-duplicates[1]!.y)).toBeGreaterThanOrEqual(6);
         } else expect(Math.abs(duplicates[0]!.y-duplicates[1]!.y)).toBeGreaterThanOrEqual(4);
         expect(targets.filter(t=>t.action==='press').length).toBeLessThanOrEqual(1);
         const middle=targets.filter(t=>tacticalRoleOf(state.players.find(p=>p.id===t.playerId)!)==='midfielder');

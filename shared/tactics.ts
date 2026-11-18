@@ -50,12 +50,17 @@ export function planTeamMovement(state: GameState, team: Team): TacticalIntent[]
   const humans = controlledPlayerIds(state);
   const teammates = state.players.filter(p => p.team === team && p.role === 'outfield');
   const figures = teammates.filter(p => !humans.has(p.id));
+  const humanForechecker = !ownBall && owner?.role !== 'keeper'
+    ? teammates.filter(p => humans.has(p.id) && tacticalRoleOf(p)==='defender'
+      && Math.hypot(p.x-origin.x,p.y-origin.y)<2.5)
+      .sort((a,b) => Math.hypot(a.x-origin.x,a.y-origin.y)-Math.hypot(b.x-origin.x,b.y-origin.y)
+        || a.id.localeCompare(b.id))[0] : undefined;
   const opponents = state.players.filter(p => p.team !== team && p.role === 'outfield');
   const enemyAttacker = opponents.find(p => tacticalRoleOf(p) === 'attacker') ?? owner ?? state.ball;
   const enemyMiddle = opponents.find(p => tacticalRoleOf(p) === 'midfielder') ?? owner ?? state.ball;
   const pressureCost = (p: Player) => Math.hypot(p.x - origin.x, p.y - origin.y)
     + (tacticalRoleOf(p) === 'defender' && ballA > 0 ? 1.5 : tacticalRoleOf(p) === 'midfielder' ? 0.5 : 0);
-  const presser = !ownBall && owner?.role !== 'keeper'
+  const presser = !humanForechecker && !ownBall && owner?.role !== 'keeper'
     ? figures.filter(p => tacticalRoleOf(p) !== 'defender' || ballA < 0
       || Math.hypot(p.x - origin.x, p.y - origin.y) < 3)
       .sort((a, b) => pressureCost(a) - pressureCost(b) || a.id.localeCompare(b.id))[0] : undefined;
@@ -138,26 +143,38 @@ export function planTeamMovement(state: GameState, team: Team): TacticalIntent[]
       .map(other => other.x * sign - 3));
     target.x = clamp(Math.min(target.x * sign, upperDepth), -limitX, limitX) * sign;
   }
-  // Outside an immediate carrier threat, replace the paired fixed rails with
-  // a ball-side step and a deeper central spare. Active shot/pass screens and
-  // secure keeper possession retain their specialised existing plans.
-  const backline = figures.filter(p => tacticalRoleOf(p) === 'defender');
-  if (backline.length === 2 && !activeDefense && owner?.role !== 'keeper') {
-    const stepping = backline.find(p => p.id === presser?.id) ?? [...backline].sort((a,b) =>
-      Math.hypot(a.x-origin.x,a.y-origin.y)-Math.hypot(b.x-origin.x,b.y-origin.y)
-      || a.id.localeCompare(b.id))[0]!;
-    const front = intents.find(t => t.playerId === stepping.id)!;
-    const spare = intents.find(t => backline.some(p => p.id === t.playerId) && t.playerId !== stepping.id)!;
-    if (front.action !== 'press' && front.action !== 'carry') {
-      const supportCap = Math.min(-5, ...intents.filter(t => !backline.some(p => p.id === t.playerId))
-        .map(t => t.x*sign-3));
-      front.x = clamp(Math.min(front.x*sign+1.5,supportCap),-limitX,limitX)*sign;
-      front.y = clamp(origin.y*.65,-5,5);
-    }
-    // Never modify a defender carrying the ball; the other one supplies cover.
-    if (spare.action !== 'carry') {
-      spare.x = clamp(front.x*sign-2.5,-limitX,-4)*sign;
-      spare.y = clamp(origin.y*.18,-1.4,1.4);
+  // A broad back line in normal play; only the designated forechecker may
+  // leave it. Cover must be genuinely behind the challenge, not a second
+  // almost-identical ball target with a different action label.
+  const backline = figures.filter(p => tacticalRoleOf(p) === 'defender')
+    .sort((a,b) => a.y-b.y || a.id.localeCompare(b.id));
+  if (teammates.filter(p=>tacticalRoleOf(p)==='defender').length===2 && backline.length>0 && owner?.role !== 'keeper') {
+    const pair = backline.map(p => intents.find(t => t.playerId === p.id)!);
+    const forecheck = humanForechecker ?? pair.find(t => t.action === 'press');
+    if (forecheck) {
+      for (const cover of pair.filter(t => t !== forecheck)) {
+        cover.x = clamp(Math.min(ballA,forecheck.x*sign)-4.5,-limitX,-5)*sign;
+        const fraction = clamp((ballA-cover.x*sign)/(ballA+FIELD.width/2 || 1),0,1);
+        cover.y = clamp(origin.y*(1-fraction),-limitY,limitY);
+        // At the goal line there is no room to drop farther: cover the other
+        // lane instead of crowding the same tackle or moving outside the pitch.
+        if (Math.hypot(cover.x-origin.x,cover.y-origin.y)<3)
+          cover.y = clamp(origin.y+(origin.y>=0?-3.5:3.5),-limitY,limitY);
+        cover.action='cover';cover.arrivalRadius=.45;
+      }
+    } else if (pair.length===2) {
+      const nearest = [...backline].sort((a,b) =>
+        Math.hypot(a.x-origin.x,a.y-origin.y)-Math.hypot(b.x-origin.x,b.y-origin.y)
+        || a.id.localeCompare(b.id))[0]!;
+      const supportCap = Math.min(-7.5,...intents.filter(t => !pair.includes(t)).map(t => t.x*sign-3));
+      const depth = Math.min(clamp(ballA-(activeDefense?4.5:8),-limitX+.45,-8),supportCap-.45);
+      const centre = clamp(origin.y*.2,-1.3,1.3);
+      pair.forEach((target,index) => {
+        if (target.action==='carry') return;
+        target.x=clamp(depth+(target.playerId===nearest.id ? .45:-.45),-limitX,limitX)*sign;
+        target.y=clamp(centre+(index===0?-3.8:3.8),-limitY,limitY);
+        target.action='cover';target.arrivalRadius=.6;
+      });
     }
   }
   return intents;

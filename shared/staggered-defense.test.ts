@@ -10,14 +10,16 @@ function shape(team:Team='home',wing=-1):GameState{
  put(`${team}-0`,1,wing*6);put(`${team}-1`,-2,0);put(`${team}-2`,-10,-4.5);put(`${team}-4`,-10,4.5);
  Object.assign(state.ball,{ownerId:`${team}-0`,x:sign,y:wing*6,vx:0,vy:0});return state;
 }
-describe('staggered ball-side backline',()=>{
- it.each([-1,1])('steps the near defender toward wing %s and tucks the spare centrally behind',wing=>{
+describe('wide backline with a small dynamic offset',()=>{
+ it.each([-1,1])('shades toward wing %s without squeezing both defenders together',wing=>{
   const state=shape('home',wing),targets=planTeamMovement(state,'home');
   const near=targets.find(t=>t.playerId===(wing<0?'home-2':'home-4'))!;
   const spare=targets.find(t=>t.playerId===(wing<0?'home-4':'home-2'))!;
-  expect(near.x-spare.x).toBeGreaterThan(1.8);
+  expect(near.x-spare.x).toBeGreaterThan(.25);
+  expect(near.x-spare.x).toBeLessThan(1.5);
   expect(Math.abs(near.y-state.ball.y)).toBeLessThan(3);
-  expect(Math.abs(spare.y)).toBeLessThan(1.5);
+  expect(Math.abs(near.y-spare.y)).toBeGreaterThanOrEqual(6);
+  expect(spare.y*wing).toBeLessThan(0);
   expect(Math.abs(spare.y)).toBeLessThan(Math.abs(near.y));
   expect(targets.filter(t=>t.action==='press')).toHaveLength(0);
  });
@@ -28,8 +30,9 @@ describe('staggered ball-side backline',()=>{
   const targets=planTeamMovement(state,'home'),def=targets.filter(t=>t.playerId==='home-2'||t.playerId==='home-4');
   expect(targets.filter(t=>t.action==='press')).toHaveLength(1);
   expect(def.filter(t=>t.action==='press')).toHaveLength(0);
-  expect(def[1]!.x-def[0]!.x).toBeGreaterThan(1.8);
-  expect(Math.abs(def[0]!.y)).toBeLessThan(1.5);
+  expect(def[1]!.x-def[0]!.x).toBeGreaterThan(.25);
+  expect(def[1]!.x-def[0]!.x).toBeLessThan(1.5);
+  expect(Math.abs(def[0]!.y-def[1]!.y)).toBeGreaterThanOrEqual(6);
  });
  it('chooses the actually nearest defender, rather than hardcoding a flank or roster index',()=>{
   const state=shape('home',1);state.players.find(p=>p.id==='home-2')!.x=-2;
@@ -53,12 +56,13 @@ describe('staggered ball-side backline',()=>{
   expect(planTeamMovement(state,'home').find(t=>t.playerId==='home-2')!.action).toBe('carry');
   state.ball.ownerId='away-3';expect(planTeamMovement(state,'home').some(t=>t.action==='press')).toBe(false);
  });
- it.each(['home','away'] as const)('moves the %s near defender up and the spare inward through actual engine ticks',team=>{
+ it.each(['home','away'] as const)('maintains the %s line width and modest offset through actual engine ticks',team=>{
   const state=shape(team,-1),enemy=team==='home'?'away':'home';state.controls=[{seatId:'p1',team,playerId:`${team}-0`},{seatId:'p2',team:enemy,playerId:`${enemy}-0`}];
   for(let i=0;i<60;i++)stepLocalGame(state,{},1/60);
   const near=state.players.find(p=>p.id===`${team}-2`)!,spare=state.players.find(p=>p.id===`${team}-4`)!,sign=team==='home'?1:-1;
   expect(state.phase).toBe('playing');expect(state.ball.ownerId).toBe(`${team}-0`);
-  expect((near.x-spare.x)*sign).toBeGreaterThan(1);expect(Math.abs(spare.y)).toBeLessThan(2);
+  expect((near.x-spare.x)*sign).toBeGreaterThan(.25);expect((near.x-spare.x)*sign).toBeLessThan(1.5);
+  expect(Math.abs(near.y-spare.y)).toBeGreaterThanOrEqual(6);
   expect(Math.abs(spare.y)).toBeLessThan(Math.abs(near.y));expect(state.score).toEqual({home:0,away:0});
  });
 });

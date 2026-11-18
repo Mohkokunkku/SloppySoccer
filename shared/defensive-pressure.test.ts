@@ -58,22 +58,18 @@ describe('active defensive pressure', () => {
     expect(targets.find(t => t.playerId === `${team}-4`)!.action).toBe('cover');
   });
 
-  it.each(['home', 'away'] as const)('screens a forward pass with the second %s defender when midfield is pressing', team => {
+  it.each(['home', 'away'] as const)('keeps the %s defensive line wide and goal-side when midfield is already pressing', team => {
     const state = attack(team);
     const sign = team === 'home' ? 1 : -1;
     Object.assign(state.players.find(p => p.id === `${team}-1`)!, {x: -6.1 * sign, y: 0});
     const targets = planTeamMovement(state, team);
     expect(targets.filter(t => t.action === 'press').map(t => t.playerId)).toEqual([`${team}-1`]);
-    const shot = targets.find(t => t.playerId === `${team}-2`)!;
-    const pass = targets.find(t => t.playerId === `${team}-4`)!;
-    expect(Math.abs(shot.y)).toBeLessThan(0.25);
-    expect(pass.y).toBeGreaterThan(1);
-    expect(pass.x * sign).toBeGreaterThan(-8);
-    expect(pass.x * sign).toBeLessThan(-6);
-    // The intended receiver is (-8, 5), so both coordinates must be on
-    // the real carrier-to-receiver segment, not a parallel kickoff rail.
-    expect((pass.x * sign + 6) / -2).toBeCloseTo(pass.y / 5);
-    expect(Math.hypot(shot.x - pass.x, shot.y - pass.y)).toBeGreaterThan(1);
+    const pair = targets.filter(t => [`${team}-2`,`${team}-4`].includes(t.playerId));
+    // Neither defender should join the midfielder's tackle at the carrier.
+    expect(pair.every(t => t.action==='cover' && t.x*sign<=-9.5)).toBe(true);
+    expect(Math.abs(pair[0]!.y-pair[1]!.y)).toBeGreaterThanOrEqual(6);
+    expect(Math.abs(pair[0]!.x-pair[1]!.x)).toBeLessThan(1.5);
+    expect(pair.every(t=>Math.hypot(t.x-state.ball.x,t.y-state.ball.y)>=3.5)).toBe(true);
   });
 
   it.each(['home', 'away'] as const)('moves the spare %s defender onto the shooting lane instead of fixed wide rails', team => {
