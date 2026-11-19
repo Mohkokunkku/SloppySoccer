@@ -1,0 +1,18 @@
+<!doctype html>
+<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#edf2f3"><title>Argentina model auditions · Sloppy Soccer</title></head>
+<body><main class="workshop">
+<header class="page-head"><div><h1>Argentina, with more presence.</h1><p>Twelve adult player models. Choose four outfield players and one goalkeeper.</p></div><nav aria-label="Workshop"><a href="/">Play match</a><a href="/squad.html">Spain reference</a></nav></header>
+<p class="audition-note">Model auditions only. Your current match squad has not changed.</p>
+<section class="inspection" aria-labelledby="inspector-name">
+ <div class="stage-wrap"><div id="model-viewer" aria-busy="true"></div><p id="gallery-status" role="status" aria-live="polite">Building the twelve original 3D models…</p></div>
+ <aside class="inspection-tools"><h2 id="inspector-name">Meet the candidates</h2><p id="inspector-details">Real articulated models, not concept illustrations. Inspect the face, body and kit from every side.</p>
+ <fieldset><legend>View</legend><div class="button-row"><button type="button" data-view="front">Front</button><button type="button" data-view="threequarter" aria-pressed="true">Three-quarter</button><button type="button" data-view="profile">Profile</button><button type="button" data-view="back">Back</button><button type="button" id="face-detail" aria-pressed="false">Face detail</button></div></fieldset>
+ <fieldset><legend>Pose</legend><div class="button-row"><button type="button" data-pose="idle" aria-pressed="true">Standing</button><button type="button" data-pose="run">Running</button><button type="button" data-pose="ready">Ready stance</button></div></fieldset>
+ <label class="comparison-label" for="compare-model">Compare at the same world scale</label><select id="compare-model"><option value="none">Candidate only</option><option value="spain">Spain’s Power Captain</option><option value="current-argentina">Current Argentina model</option></select>
+ <p class="viewer-hint">Drag to turn. Scroll or pinch to zoom. View buttons reset the camera.</p><button type="button" id="pick-inspected" class="primary" disabled>Choose this candidate</button>
+ </aside>
+</section>
+<section class="casting" aria-labelledby="casting-heading"><div class="section-head"><h2 id="casting-heading">The casting shelf</h2><p>Different builds, faces and hair—not twelve recolours. Click Inspect for a closer look.</p></div><div id="candidate-grid" class="candidate-grid" aria-busy="true"></div></section>
+<section class="shortlist" aria-labelledby="shortlist-heading"><div><h2 id="shortlist-heading">Your shortlist</h2><p id="selection-summary" role="status" aria-live="polite">0 of 4 outfield players · 0 of 1 goalkeeper</p><p id="selection-notice" aria-live="polite">Pick any four outfield models and one keeper. Nothing is applied to the game.</p></div><div class="shortlist-output"><label for="selection-output">Copy these IDs into your reply when you have decided</label><textarea id="selection-output" readonly rows="4"></textarea><div class="button-row"><button type="button" id="copy-lineup" class="primary" disabled>Copy lineup</button><button type="button" id="clear-lineup">Clear choices</button></div></div></section>
+<footer>Original procedural 3D models · Satin plastic, Argentina colours, adult proportions. These are fictional designs, not player likenesses.</footer>
+</main><script type="module" src="/src/argentina-model-gallery.ts"></script></body></html>
