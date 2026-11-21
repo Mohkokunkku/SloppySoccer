@@ -108,7 +108,7 @@ test.describe('production Spain squad', () => {
     await expectWebGL(page.locator('#pitch canvas'));
     const expectedCharacters: Record<string, string> = {
       'home-0': 'A1', 'home-1': 'A3', 'home-2': 'A2', 'home-3': '', 'home-4':'A2',
-      'away-0': '', 'away-1': '', 'away-2': '', 'away-3': '', 'away-4':'',
+      'away-0': 'P04', 'away-1': 'P01', 'away-2': 'P06', 'away-3': 'K01', 'away-4':'P05',
     };
     const expectCharacters = async () => {
       await expect(page.locator('.role-marker[data-player]')).toHaveCount(10);

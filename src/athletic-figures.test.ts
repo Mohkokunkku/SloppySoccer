@@ -8,7 +8,9 @@ it('uses A1, A3 and A2 together as Spain attacker, midfield and defender without
  expect(state).toEqual(before);
  expect(createFigure(state.players[3],3).root.userData.characterId).toBeUndefined();
  expect(createFigure(state.players.find(p=>p.id==='home-4')!,4).root.userData.characterId).toBe('A2');
- for(const [i,p]of state.players.entries())if(p.team==='away'||p.role==='keeper')expect(createFigure(p,i).root.userData.characterId).toBeUndefined();
+ for(const [i,p]of state.players.entries())if(p.team==='home'&&p.role==='keeper')expect(createFigure(p,i).root.userData.characterId).toBeUndefined();
+ const argentina={'away-0':'P04','away-1':'P01','away-2':'P06','away-4':'P05','away-3':'K01'};
+ for(const [id,candidate]of Object.entries(argentina)){const p=state.players.find(player=>player.id===id)!;expect(createFigure(p,state.players.indexOf(p)).root.userData.characterId).toBe(candidate);}
 });
 it('makes the captain visibly broader and bearded, and the runner distinguishable by a headband',()=>{
  const p=createGame().players;const a1=createFigure(p[0],0),a2=createFigure(p[2],2),a3=createFigure(p[1],1);

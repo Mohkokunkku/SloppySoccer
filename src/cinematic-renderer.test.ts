@@ -104,9 +104,11 @@ it('centers real original and adult face surfaces with transformed body height',
   rig.root.position.set(player.x,.35,player.y);rig.root.rotation.y=team==='home'?Math.PI/2:-Math.PI/2;
   rig.body.position.y=.2;rig.body.rotation.z=.12;
   const face=rig.root.getObjectByName('face') as THREE.Mesh;
-  expect(face.position.y).toBeCloseTo(team==='home'?2.77:2.11);
+  if(team==='home')expect(face.position.y).toBeCloseTo(2.77);
   rig.root.updateMatrixWorld(true);
-  const surface=face.localToWorld(new THREE.Vector3(0,0,1));
+  face.geometry.computeBoundingBox();const bounds=face.geometry.boundingBox!;
+  const local=bounds.getCenter(new THREE.Vector3());local.z=bounds.max.z;const surface=face.localToWorld(local);
+  expect(surface.y).toBeGreaterThan(2.4);
   renderer.updateCamera(state);
   const projected=surface.clone().project(renderer.camera);
   expect(projected.x).toBeCloseTo(0,6);expect(projected.y).toBeCloseTo(0,6);
@@ -116,7 +118,7 @@ it('centers real original and adult face surfaces with transformed body height',
   // already outside a mould's shoulder half-width (no hidden occluders).
   expect(Math.abs(direction.z/direction.x)*2).toBeGreaterThan(.8);
   face.name='unnamed-head';renderer.updateCamera(state);
-  expect(renderer.camera.position.y).toBeCloseTo(.35+(team==='home'?2.77:2.11)+.8);
+  expect(renderer.camera.position.y).toBeCloseTo(.35+2.77+.8);
  }
 });
 it('keeps shortest-angle team blends continuous and paused camera transforms frozen',()=>{

@@ -3,6 +3,7 @@ import * as THREE from 'three';
 import {OrbitControls} from 'three/addons/controls/OrbitControls.js';
 import {ARGENTINA_CANDIDATES,createArgentinaCandidate,disposeArgentinaCandidate,type ArgentinaCandidateId} from './argentina-candidate-models';
 import {emptyLineup,toggleCandidate,restoreLineup,lineupReady,selectionText,type AuditionLineup} from './argentina-lineup';
+import {CONFIRMED_ARGENTINA_LINEUP} from './argentina-squad';
 import {createGame} from '../shared/engine';
 import {createFigure,disposeTabletop,type FigureRig} from './scene';
 
@@ -10,6 +11,7 @@ const query=<T extends Element>(selector:string)=>document.querySelector<T>(sele
 const status=query<HTMLElement>('#gallery-status'),host=query<HTMLElement>('#model-viewer'),grid=query<HTMLElement>('#candidate-grid');
 const name=query<HTMLElement>('#inspector-name'),details=query<HTMLElement>('#inspector-details');
 const storageKey='sloppySoccer.argentinaAudition.v1';
+query<HTMLElement>('.audition-note').textContent=`Confirmed match squad: ${CONFIRMED_ARGENTINA_LINEUP.outfield.join(', ')} + ${CONFIRMED_ARGENTINA_LINEUP.keeper}. Further shortlist changes here do not change the match squad.`;
 const reduced=matchMedia('(prefers-reduced-motion: reduce)');
 type View='front'|'threequarter'|'profile'|'back';
 type Pose='idle'|'run'|'ready';

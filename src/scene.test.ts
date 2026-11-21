@@ -19,7 +19,13 @@ describe('offline procedural toy geometry', () => {
     const p:Player={id:'home-0',team:'home',role:'outfield',x:0,y:0,vx:0,vy:0,facing:0,stamina:1};
     const spain=createFigure(p,0);const argentina=createFigure({...p,id:'away-0',team:'away'},4);
     expect(((spain.root.getObjectByName('jersey') as THREE.Mesh).material as THREE.MeshPhysicalMaterial).color.getHex()).toBe(TEAMS.home.primary);
-    expect(argentina.root.getObjectByName('argentina-stripe')).toBeDefined();
+    const jersey=argentina.root.getObjectByName('jersey') as THREE.Mesh<THREE.BufferGeometry,THREE.MeshPhysicalMaterial>;
+    expect(jersey.material.map).toBeInstanceOf(THREE.DataTexture);
+    const pixels=(jersey.material.map as THREE.DataTexture).image.data as Uint8Array,colors=new Set<string>();
+    for(let i=0;i<pixels.length;i+=4)colors.add(`${pixels[i]},${pixels[i+1]},${pixels[i+2]}`);
+    expect(colors.has('117,183,218')).toBe(true);expect(colors.has('247,248,244')).toBe(true);
+    const positions=jersey.geometry.getAttribute('position'),uv=jersey.geometry.getAttribute('uv');
+    for(let i=0;i<positions.count;i++)if(Math.abs(positions.getX(i))<1e-6&&positions.getZ(i)>.1)expect(uv.getX(i)).toBeCloseTo(.5);
     const board=buildTabletop();expect(board.getObjectByName('flag-home')).toBeDefined();expect(board.getObjectByName('flag-away')).toBeDefined();
   });
   it('applies a winning cheer and restores neutral limbs afterward',()=>{

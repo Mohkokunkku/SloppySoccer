@@ -1,0 +1,14 @@
+# Confirmed Argentina squad integration
+
+User selected and explicitly authorized implementation: outfield **P04, P01, P06, P05**, goalkeeper **K01**. Apply that exact order to stable IDs `away-0`, `away-1`, `away-2`, `away-4`; `away-3` remains the keeper. Do not couple cosmetic selection to mutable tactical roles or player-array order. No Spain mould, physical ability, simulation, AI, keeper protection, audio or result behavior changes.
+
+Branch remains `feature/argentina-adult-model-auditions`, base `d52fbb04f2d73d7b4ed09d2b6923de8dbc8e7ae3`. Do not push/merge/deploy automatically. Preserve audition source geometry and all alternative models.
+
+## Exclusive worker scope
+Codex owns ONLY new `src/argentina-squad.ts` and `src/argentina-squad.test.ts`. Coordinator owns existing scene/renderer/handshake/gallery files, cross-runtime tests, builds/browser/review/commit. No overlapping edits or additional workers.
+
+Export `CONFIRMED_ARGENTINA_LINEUP` readonly object `{outfield:['P04','P01','P06','P05'],keeper:'K01'}` using ArgentinaCandidateId types. Export `argentinaCandidateFor(player: Pick<Player,'id'|'team'|'role'>): ArgentinaCandidateId|null` and `createConfirmedArgentinaFigure(player: Player): FigureRig|null`.
+
+Resolver: non-away=>null; any away role=keeper=>K01; away outfield IDs 0,1,2,4 map in exact selected order; unknown outfield=>null (legacy fallback). Factory calls existing createArgentinaCandidate without altering its source or proportions, preserves actual returned articulated joints (do NOT call articulateRunningRig a second time), root name `player-${player.id}`, userData.candidateId and characterId both model ID, displayName from catalog, markerHeight above actual mould bounds. Store `userData.floorOffset=-new THREE.Box3().setFromObject(root).min.y` (coordinator's poseFigure will apply root offset) and markerHeight from full mould height+0.3. No roots/limbs scale changes. Rename keeper glove meshes to `hand` on this runtime instance so current handshake solver resolves the real palms; preserve candidate factory/gallery originals. Ensure no state/player mutation.
+
+Test-first: resolver mapping for actual game roster and reversed array, unchanged mapping after tactical-role changes/all formations, null Spain/unknown safe cases, keeper role not legacy slot guessed, exact candidate factory geometry/resources, positive real hand under actual elbows, joint arrays length2, root metadata/bounds and no shared resource/state mutation. Run focused Vitest only, `python .local-server/capture-node.py node_modules/vitest/vitest.mjs run src/argentina-squad.test.ts` (direct node if sandbox prevents Python). Parent owns final integration; do not edit source scene.ts to make tests import integration early. No build/browser/install/config/git/service/deploy/spawn. Exact gpt-6-luna low. Return actual RED/GREEN result and handoff.
