@@ -4,8 +4,8 @@ import {createGame}from '../shared/engine';
 import {createFigure,poseFigure}from './scene';
 it.each(createGame().players)('articulates knees and elbows for $id and restores reduced-motion/cheer poses',player=>{
  const original=structuredClone(player);const rig=createFigure(player,0);
- const knees=rig.root.getObjectsByProperty('name','running-knee') as THREE.Group[];
- const elbows=rig.root.getObjectsByProperty('name','running-elbow') as THREE.Group[];
+ const knees=rig.knees??[];
+ const elbows=rig.elbows??[];
  expect(knees).toHaveLength(2);expect(elbows).toHaveLength(2);
  poseFigure(rig,player,0,false);const running={...player,x:player.x+.3,vx:6};poseFigure(rig,running,.05,false);
  expect(Math.max(...knees.map(p=>p.rotation.x))).toBeGreaterThan(.15);

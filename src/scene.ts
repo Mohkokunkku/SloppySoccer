@@ -9,6 +9,7 @@ import {celebrationPose} from './celebrations';
 import {characterIdFor} from './character-id';
 import {createAthleticFigure} from './athletic-figures';
 import {articulateRunningRig} from './running-joints';
+import {createConfirmedArgentinaFigure} from './argentina-squad';
 
 export const COLORS = { coral: TEAMS.home.primary, cobalt: TEAMS.away.primary, green: 0x39765b, ivory: 0xf8f3e6, charcoal: 0x252c2d, oak: 0xc89f70 };
 const plastic = (color: THREE.ColorRepresentation, roughness = 0.34) => new THREE.MeshPhysicalMaterial({ color, roughness, metalness: 0, clearcoat: 0.35, clearcoatRoughness: 0.3 });
@@ -183,6 +184,7 @@ export function disposeTabletop(root:THREE.Group):void {
 
 export interface FigureRig { root: THREE.Group; body: THREE.Group; legs: THREE.Group[]; arms: THREE.Group[]; knees?:THREE.Group[];elbows?:THREE.Group[]; locomotion?:Locomotion; poseTime?:number }
 export function createFigure(player: Player, index: number): FigureRig {
+  const argentina=createConfirmedArgentinaFigure(player);if(argentina)return argentina;
   const characterId=characterIdFor(player.team,player.role,player.tacticalRole);
   if(characterId)return articulateRunningRig(createAthleticFigure(player,index,characterId),true);
   const root = new THREE.Group(); root.name = `player-${player.id}`;
@@ -232,7 +234,7 @@ export function createFigure(player: Player, index: number): FigureRig {
 
 export function poseFigure(rig: FigureRig, player: Player, elapsed: number, reducedMotion: boolean, cheer?:{style:number;seconds:number;index:number}): void {
   setFigureExpression(rig,'neutral');
-  rig.root.position.set(player.x, 0.1, player.y);
+  rig.root.position.set(player.x, 0.1+(typeof rig.root.userData.floorOffset==='number'?rig.root.userData.floorOffset:0), player.y);
   rig.root.rotation.y = Math.PI / 2 - player.facing;
   const dt=Math.max(0,elapsed-(rig.poseTime??0));rig.poseTime=elapsed;
   // Legacy standalone callers have no previous frame. The live renderer always seeds an actual baseline.

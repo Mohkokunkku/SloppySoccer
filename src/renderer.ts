@@ -16,6 +16,8 @@ import {handshakeStart} from './post-match';
 import {poseHandshakePair} from './handshake';
 import {fairPlayFrame} from './fair-play';
 import {TEAMS} from './teams';
+import {figureFaceAnchor} from './figure-face-anchor';
+import {disposeRenderResources} from './render-resources';
 import { buildTabletop, disposeTabletop, cameraBounds, COLORS, createFigure, createFootball, poseFigure, setFigureExpression, shadowTexture, type FigureRig } from './scene';
 const SEAT_COLORS=[0xffe183,0x7ce9ff,0xff91d5,0xaaff8c];
 
@@ -109,7 +111,7 @@ export class ToyRenderer {
   private signature():string {return [this.tuning.fieldWidth,this.tuning.fieldHeight,this.tuning.goalWidth,this.tuning.goalHeight,this.entryHeight].join(':');}
 
   private release(root:THREE.Object3D):void {
-    root.removeFromParent();root.traverse(object=>{if(object instanceof THREE.Mesh){object.geometry.dispose();const materials=Array.isArray(object.material)?object.material:[object.material];materials.forEach(material=>material.dispose());}});
+    root.removeFromParent();disposeRenderResources(root);
   }
 
   private syncFigures(state:GameState):void {
@@ -131,11 +133,8 @@ export class ToyRenderer {
     const bounds=cameraBounds(size(this.host.clientWidth)/size(this.host.clientHeight),this.tuning,this.entryHeight);
     const subject=(team:'home'|'away')=>{
       const player=state.players.find(p=>p.team===team&&p.role==='outfield');
-      const root=player?this.figures.get(player.id)?.root:undefined;
-      const face=root?.getObjectByName('face');root?.updateMatrixWorld(true);
-      // Both moulds use a unit sphere scaled into a face; anchor its front
-      // surface, not the cranium center behind the visible facial features.
-      const point=face?.localToWorld(new THREE.Vector3(0,0,1));
+      const rig=player?this.figures.get(player.id):undefined,root=rig?.root;
+      const point=rig?figureFaceAnchor(rig):undefined;
       const fallback=root?.localToWorld(new THREE.Vector3(0,root.userData.characterId?2.77:2.11,root.userData.characterId ? .224 : .3));
       return {x:point?.x??fallback?.x??0,y:point?.y??fallback?.y??2.11,z:point?.z??fallback?.z??0,yaw:root?.rotation.y??0,faceHeight:0};
     };
@@ -161,8 +160,7 @@ export class ToyRenderer {
       const roster=state.players.filter(p=>view.segment==='losers'?p.team!==view.winner:p.team===view.winner);
       const shot=view.segment==='losers'?view.elapsed-6:view.elapsed;
       const player=roster[Math.min(roster.length-1,Math.floor(shot/2))],rig=player?this.figures.get(player.id):undefined;
-      const face=rig?.root.getObjectByName('face');rig?.root.updateMatrixWorld(true);
-      const point=face?.localToWorld(new THREE.Vector3(0,0,1))??rig?.root.position.clone()??new THREE.Vector3();
+      const point=rig?figureFaceAnchor(rig):new THREE.Vector3();
       const yaw=(rig?.root.rotation.y??0)+.2+Math.sin(shot*.7)*.12;
       height=4.4+view.theme*.25;width=height*aspect;
       this.camera.position.set(point.x+Math.sin(yaw)*7,point.y+.8,point.z+Math.cos(yaw)*7);this.camera.lookAt(point);
@@ -323,13 +321,7 @@ export class ToyRenderer {
   dispose(): void {
     this.renderer.setAnimationLoop(null); this.observer.disconnect();
     this.scene.remove(this.board);disposeTabletop(this.board);
-    this.scene.traverse(object => {
-      if (object instanceof THREE.Mesh) {
-        object.geometry.dispose();
-        const materials = Array.isArray(object.material) ? object.material : [object.material];
-        materials.forEach(material => material.dispose());
-      }
-    });
+    disposeRenderResources(this.scene);
     for(const badge of this.seatBadges.values())badge.remove();this.seatBadges.clear();
     this.labels.remove();this.markers.clear();
     this.renderer.dispose(); this.renderer.domElement.remove();
